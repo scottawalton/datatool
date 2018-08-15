@@ -1,6 +1,10 @@
-def RMfix(df):
+import pandas as pd
+import glob
+import sys, os
+import numpy as np
+import re
 
-    df = pd.read_csv(i, index_col=None, dtype=object)
+def RMfix(df):
 
     # Fix Billing Companys and Payment Methods
 

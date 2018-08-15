@@ -3,6 +3,7 @@ import glob
 import sys, os
 import numpy as np
 import datetime
+from itertools import chain
 
 
 def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
@@ -29,8 +30,8 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
         if "ClientAutopayContract" in i:
             mem = pd.read_csv(i, index_col=None, dtype=object)
 
-        if "ClientPricingOption" in i:
-            mem2 = pd.read_csv(i, index_col=None, dtype=object)
+#        if "ClientPricingOption" in i:
+#            mem2 = pd.read_csv(i, index_col=None, dtype=object)
 
 
     # Need to implement Custom Fields file import (orignal transfer didn't require)
@@ -62,17 +63,19 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     mem.drop(['PayerBarcodeID','PayerLastName','PayerFirstName', 'TerminationDate',
     'RunDateTime', 'Contract Agreement Date', 'LocationName', 'AutoPayItemDescription'], axis=1, inplace=True)
 
-    mem2.drop(['BarcodeID','Returned', 'Duration', 'DurationUnit', 'PaymentDataID', 'ItemType',
-    'NumClasses', 'PaymentAmount', 'Program/Service Category', 'FirstName', 'LastName'], axis=1, inplace=True)
+#    mem2.drop(['BarcodeID','Returned', 'Duration', 'DurationUnit', 'PaymentDataID', 'ItemType',
+#    'NumClasses', 'PaymentAmount', 'Program/Service Category', 'FirstName', 'LastName'], axis=1, inplace=True)
 
 
 
     # Clean Up
 
+    # Membership file cleanup
+
     mem['ScheduleDate'] = pd.to_datetime(mem['ScheduleDate'])
 
-
     # ------ Super slow solution -------- open to suggestions here
+    # Grabs the closest payment entry from each of a Contact's Memberships
 
     new_mem = []
 
@@ -82,14 +85,22 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
         for subname, subgroup in group.groupby(['Contract Start Date','Contract End Date']):
 
-            # subgroup is the membership payments 
+            # subgroup is the membership payments
 
             tempFuture = pd.DataFrame(columns=mem.columns.values)
             tempPast = pd.DataFrame(columns=mem.columns.values)
 
             for index, row in subgroup.iterrows():
 
-                # row is the payment 
+                # row is the payment
+
+                # Removes payments that were deleted
+
+                if row['ContractDeleted'] == 'True':
+                    break
+
+                # Sorts the payments into future or past, based on today
+                # We do this so we can have the payment CLOSEST to today that has not passed
 
                 if row['ScheduleDate'].date() > datetime.date.today():
                     tempFuture = tempFuture.append(row)
@@ -97,43 +108,65 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
                 elif row['ScheduleDate'].date() < datetime.date.today():
                     tempPast = tempPast.append(row)
 
+            # Need to use if statements to see if the membership is in the future/past
 
             if len(tempFuture.index) != 0:
 
-                mostRecent = tempFuture.sort_values('ScheduleDate', ascending=True).head(1).to_dict('list')
-                new_mem.append(mostRecent)
-                
+                mostRecent = tempFuture.sort_values('ScheduleDate', ascending=True).head(1).values.tolist()
+                mostRecent = list(chain.from_iterable(mostRecent))
+                if mostRecent != []:
+                    new_mem.append(mostRecent)
+
             else:
-                
-                mostRecent = tempPast.sort_values('ScheduleDate', ascending=True).head(1).to_dict('list')
-                new_mem.append(mostRecent)
-                
-        # lets you know the progress
 
-        print('New Member -- ' + str(name) + '/' + str(mem['MBSystemID'].max()))
-        print(type(new_mem[1]))
+                mostRecent = tempPast.sort_values('ScheduleDate', ascending=False).head(1).values.tolist()
+                mostRecent = list(chain.from_iterable(mostRecent))
+                if mostRecent != []:
+                    new_mem.append(mostRecent)
 
-    mem = pd.DataFrame.from_dict(new_mem)
+    # Create new Memberships DB from New_Mem
 
+    mem = pd.DataFrame(new_mem, columns=mem.columns.values)
 
-    # -------- End slow solution ---------
+    # -------- End slow solution -----------------------------------
+
+    # Basic cleanup to make import more manageable
 
     mem['Amount'] = mem['Amount'].str.replace(r'00$', '')
     mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Credit Card', 'CC')
     mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('ACH', 'EFT')
     mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Debit Account', 'CC')
-    # mem = mem.str.replace({r'^[\'': '\']$', '')
-
+    mem.drop('ContractDeleted', axis=1, inplace=True)
     mem.rename(columns={'ContractName': 'Current Program'}, inplace=True)
 
-    # If ContractDeleted = True, delete row
+    # Get Most recent Membership by Start Date -- we can only import primary memberships at this time :(
 
-    # Replace Dates that we need to sort by with datetimes
     mem['Contract Start Date'] = pd.to_datetime(mem['Contract Start Date'])
+    mem = mem.sort_values('Contract Start Date', ascending=False).groupby('MBSystemID').head(1)
+
+    # Clean notes up
+
+    notes = notes.replace(r'\n', ' ')
+
+    # Financials cleanup
+
+    fin.rename(columns={'ClientID': 'MBSystemID'}, inplace=True)
+
+    # Relationships cleanup
+
+    rel.rename(columns={'MBSystemID1': 'MBSystemID'}, inplace=True)
+    rel['Relationships'] = rel['RelName1'] + ': ' + rel['FirstName2'] + ' ' + rel['LastName2']
+    rel = rel.groupby('MBSystemID').agg({'Relationships':' -- '.join}).reset_index()
+    rel.drop(['LastName1','FirstName1','RelName2','MBSystemID2','LastName2','FirstName2', 'RelName1'], axis=1, inplace=True)
+
 
     # Merge files
 
-    #complete = pd.merge(con, mem, on=['Last Att. Date', 'Full Name'], how='left')
+    needs_merge = [mem, fin, rel, notes]
+    complete = con
+
+    for i in needs_merge:
+        complete = pd.merge(complete, i, on='MBSystemID', how='left')
 
     # Output files
 
@@ -144,11 +177,11 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     con.name = 'Contacts'
     mem.name = 'Memberships'
-    mem2.name = 'Memberships 2'
     fin.name = 'Financials'
     rel.name = 'Relationships'
-#    complete.name = 'Complete_File'
+    notes.name = 'Notes'
+    complete.name = 'Complete_File'
 
-    for i in [con, mem, mem2, fin, rel]:
+    for i in [con, mem, fin, rel, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)

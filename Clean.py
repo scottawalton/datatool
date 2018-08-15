@@ -182,7 +182,6 @@ if __name__ == '__main__':
         # Add ability to parse filename + make it required
 
         parser.add_argument('filename', help='Csv file to clean')
-        args = parser.parse_args()
 
         # Load in file specified by filename
 
