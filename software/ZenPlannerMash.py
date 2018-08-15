@@ -1,0 +1,112 @@
+import pandas as pd
+import glob
+import sys, os
+import numpy as np
+
+
+def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
+
+
+    path = path_to_files + '/*.csv'
+    files = glob.glob(path)
+
+    main = pd.DataFrame()
+
+    for i in files:
+        if "People" in i:
+            con = pd.read_csv(i, index_col=None, dtype=object)
+
+
+        if "Membership" in i:
+            mem = pd.read_csv(i, index_col=None, dtype=object)
+
+
+        if "Attendance" in i:
+            ranks = pd.read_csv(i, index_col=None, dtype=object)
+
+        if "Bills" in i:
+            bills = pd.read_csv(i, index_col=None, dtype=object)
+
+
+
+    # Rename for merge
+
+    con.rename(columns={'Inquiry Date': 'Date Added'}, inplace=True)
+    ranks.rename(columns={'Person': 'Full Name'}, inplace=True)
+
+    # Drop columns we can't use
+
+    con.drop(['Family', 'Age', 'Prospect Status', 'Prospect Status (sub)', 'Interest',
+     'Prospect Priority', 'Sales Rep', 'Primary Instructor', 'Primary Location', 'Trial End Date',
+     'Signup Date', 'Days as Prospect', 'Days Since Att.', 'First Att. Date', 'Att. Last 30 Days',
+     'Att. Total', 'Has Password?', 'Signed Documents'], axis=1, inplace=True)
+
+    mem.drop(['Has Been Renewed', 'Renewal Type', 'Drop Date', 'Drop Reason', 'Drop Reason (sub)',
+     'Drop Comments', 'Months', 'Signup Fee', 'Autopay?', 'People (count)', 'Shared?', 'Att. Remaining',
+     'Att. Limit Type', 'Att. Limit', 'Att. Total', 'Enrollments', 'Primary Location', 'Income Category',
+     'Tax2?', 'Taxable?'], axis=1, inplace=True)
+
+    ranks.drop(['Check In Date', 'Time', 'Reservation Date', 'Session Type', 'Attendance Type',
+      'Location', 'Staff Member', 'Rsvp', 'Att.', 'Att. Last 30 Days', 'Att. Since Last Test',
+      'Class Notes', 'Membership', 'Membership Label', 'Begin Date', 'End Date'], axis=1, inplace=True)
+
+    bills.drop(['Paid By Staff', 'Sales Rep', 'Income Category', 'Paid Date', 'Paid Month',
+      'Paid On Time', 'Unit Count', 'Unit Price', 'Discount Total', 'After Discounts', 'Taxable?', 'Tax Amt',
+      'Tax 2?', 'Tax 2 Amt', 'Amount Due', 'Amount Paid', 'Amount Unpaid', 'First Name', 'Last Name'], axis=1, inplace=True)
+
+    # Clean Up
+
+    # Need this to group by
+
+    for a in [mem, con]:
+        for index, x in a.iterrows():
+            x = str(a.iloc[index]['First Name']) + " " + str(a.iloc[index]['Last Name'])
+            a.set_value(index, 'Full Name', x)
+
+    # Ranks - If last attendance date = date: preserve, else, drop
+
+    ranks = ranks[ranks['Last Att. Date'] == ranks['Date']]
+
+    # Sort out rank systems if necessary (not sure how to do this without manually looking at file)
+
+    # Mems - Find duplicates based of name + last attendance date - keep one iwht highest number
+
+    #mem = mem.groupby(['Full Name', 'Last Att. Date'], as_index=False).apply(lambda x: x.sort_values(["Number"], ascending = False).reset_index(drop=True))
+    mem = mem.sort_values('Number', ascending=True).groupby(['Full Name', 'Last Att. Date'], as_index=False).head(1)
+
+    # Bills
+
+    bills['Desc'], bills['Number'] = bills['Description'].str.split(' #', 1).str
+    bills = bills[(bills['Purchase Type'] == 'Membership') & (bills['Status'] == 'UNPAID')]
+    bills = bills.sort_values('Bill #', ascending=True).groupby('Number', as_index=False).head(1)
+    bills['Drop Me'], bills['Installments'] = bills['Notes'].str.split('l ', 1).str
+    bills['Paid'], bills['Total'] = bills['Installments'].str.split('/', 1).str
+    bills['Installments Remaining'] = bills['Total'].apply(pd.to_numeric, errors='ignore') - bills['Paid'].apply(pd.to_numeric, errors='ignore') + 1
+    bills.drop(['Drop Me', 'Installments', 'Total', 'Paid', 'Desc', 'Status', 'Purchase Type', 'Bill #', 'Description', 'Notes', 'Subtotal'], inplace=True, axis=1)
+    bills.rename(columns={'Due Date': 'Next Payment Due Date'}, inplace=True)
+
+    # Merge based on
+
+
+    # Merge files
+
+    complete = pd.merge(con, mem, on=['Last Att. Date', 'Full Name'], how='left')
+    complete = pd.merge(complete, ranks, on=['Last Att. Date', 'Full Name'], how='left').drop_duplicates()
+    complete = pd.merge(complete, bills, on=['Number'], how='left')
+
+    # Output files
+
+    try:
+        os.mkdir('clean')
+    except Exception:
+        pass
+
+    con.name = 'Contacts'
+    mem.name = 'Memberships'
+    ranks.name = 'Ranks'
+    bills.name = 'Bills'
+    complete.name = 'Complete_File'
+
+    for i in [con, mem, ranks, bills, complete]:
+
+        i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
