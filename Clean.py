@@ -142,6 +142,35 @@ def fix_zp_dates(df):
         df[x] = pd.to_datetime(df[x])
         df[x].dt.strftime('%m-%d-%Y').astype(str)
 
+def probably_useless(df, df2):
+
+    # Takes two files with a unique identifier, prioritizes one and merges the data together where it can.
+
+        df.set_index('MBSystemID', inplace=True)
+        df2.set_index('MBSystemID', inplace=True)
+
+        intersect_MB = pd.DataFrame(columns=df.columns.values)
+        intersect_RM = pd.DataFrame(columns=df.columns.values)
+        outer = pd.DataFrame(columns=df.columns.values)
+
+        for index, row in df.iterrows():
+            if index in df2.index.values and index not in intersect_MB.index.values:
+                intersect_MB = intersect_MB.append(row)
+            elif index not in outer.index.values:
+                outer = outer.append(row)
+
+        for index, row in df2.iterrows():
+            if index in df.index.values and index not in intersect_RM.index.values:
+                intersect_RM = intersect_RM.append(row)
+            elif not index in outer.index.values:
+                outer = outer.append(row)
+
+        priority = intersect_RM.combine_first(intersect_MB)
+        for i in outer.index.values:
+            if i in priority.index.values:
+                print('what')
+        df = priority.append(outer)
+
 
 # If called as executable
 
@@ -158,7 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--filepath', default=os.getcwd(), type=str, metavar='', help='Path to file')
     parser.add_argument('-R', '--noranks', action='store_true',help="Preserve ranks")
     parser.add_argument('-W', '--whitespace', action='store_false',help="Preserve whitespace")
-    parser.add_argument('-t', '--type', type=str, metavar='', help='Type of data file, e.g. RM, PM')
+    parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM', 'PM', 'MB', 'ASF', 'ZP'],help='Type of data file, e.g. RM, PM')
+    parser.add_argument('filename', help='Csv file to clean')
     args = parser.parse_args()
 
     # Handle multiple file software specific exports
@@ -181,11 +211,11 @@ if __name__ == '__main__':
 
         # Add ability to parse filename + make it required
 
-        parser.add_argument('filename', help='Csv file to clean')
 
         # Load in file specified by filename
 
         df = load(args.filename, args.filepath)
+
 
         # Apply changes as specified by args
 

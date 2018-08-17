@@ -71,7 +71,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     # Clean Up
 
     # Membership file cleanup
-
+    cols = mem.columns.values
     mem['ScheduleDate'] = pd.to_datetime(mem['ScheduleDate'])
 
     # ------ Super slow solution -------- open to suggestions here
@@ -112,6 +112,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
             if len(tempFuture.index) != 0:
 
+                tempFuture['Payments Remaining'] = tempFuture.shape[0]
                 mostRecent = tempFuture.sort_values('ScheduleDate', ascending=True).head(1).values.tolist()
                 mostRecent = list(chain.from_iterable(mostRecent))
                 if mostRecent != []:
@@ -119,6 +120,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
             else:
 
+                tempFuture['Payments Remaining'] = '0'
                 mostRecent = tempPast.sort_values('ScheduleDate', ascending=False).head(1).values.tolist()
                 mostRecent = list(chain.from_iterable(mostRecent))
                 if mostRecent != []:
@@ -126,7 +128,9 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     # Create new Memberships DB from New_Mem
 
-    mem = pd.DataFrame(new_mem, columns=mem.columns.values)
+    pr = ['Payments Remaining']
+    cols = np.append(cols, pr)
+    mem = pd.DataFrame(new_mem, columns=cols)
 
     # -------- End slow solution -----------------------------------
 
@@ -157,7 +161,6 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     rel.rename(columns={'MBSystemID1': 'MBSystemID'}, inplace=True)
     rel['Relationships'] = rel['RelName1'] + ': ' + rel['FirstName2'] + ' ' + rel['LastName2']
     rel = rel.groupby('MBSystemID').agg({'Relationships':' -- '.join}).reset_index()
-    rel.drop(['LastName1','FirstName1','RelName2','MBSystemID2','LastName2','FirstName2', 'RelName1'], axis=1, inplace=True)
 
 
     # Merge files
