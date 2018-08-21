@@ -92,4 +92,6 @@ def RMfix(df):
     df = df.drop(['Age', 'Total_Contract_Amount', 'Down_Payment', 'Total_Financed', 'Number_of_Installments',
                 'First_Payment_Due_Date', 'last_payment_date', 'Date_to_Take_Payment', 'Middle_Init'], axis=1)
 
+    df.dropna(how='all', axis='columns', inplace=True)
+
     return df

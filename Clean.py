@@ -216,7 +216,6 @@ if __name__ == '__main__':
 
         df = load(args.filename, args.filepath)
 
-
         # Apply changes as specified by args
 
         if args.noranks:
