@@ -41,16 +41,16 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     con.drop(['LeadLeadAge', 'MissedPayment', 'FullNameSimple', 'BecameClient', 'BecameFormerClient',
     'ContactedDate', 'Featured', 'StripesAwarded', 'ClassesSinceLastExam', 'RelatedContactEmail2', 'PointstoBlackBelt',
-    'Medical', 'InfoDueby', 'NeedInfo', 'MiddleName', 'Employer'], axis=1, inplace=True)
+    'Medical', 'InfoDueby', 'NeedInfo', 'MiddleName', 'Employer'], axis=1, inplace=True, errors='ignore')
 
     ranks.drop(['PromotionId', 'ClassesAttended', 'NextRankPromotionDate', 'IsRankReady', 'ClassesSinceLastRankPromotion', 'CurrentStripe',
-    'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder'], axis=1, inplace=True)
+    'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder'], axis=1, inplace=True, errors='ignore')
 
-    fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber'], axis=1, inplace=True)
+    fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber'], axis=1, inplace=True, errors='ignore')
 
     mem.drop(['Finance Info Record', 'Transaction Record', 'TotalAmount', 'RemainingBalance', 'DelinquentAmount',
     'OnHold', 'FirstPayment', 'FinalPayment', 'Ongoing', 'SubTotal', 'TAXONE', 'Tax', 'DelinquentSince',
-    'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays'], axis=1, inplace=True)
+    'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays'], axis=1, inplace=True, errors='ignore')
 
 
     # clean up financials // sort down to most recent & reliable card, keep only that ContactRecord

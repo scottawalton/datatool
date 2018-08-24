@@ -22,14 +22,6 @@ def load(filename, filepath):
             df = pd.read_csv(data, index_col=None, dtype=object, encoding="ISO-8859-1" )
             return df
 
-
-def drop_cols(df):
-
-    # Drop Columns I Can't Import
-
-    df  = df.drop(["Family Name", "Middle Name", "Age", "SMS Phone Carrier", "Full Address", "Send SMS"], 1, errors='ignore')
-
-
 def split_phones(df, phones):
 
     # Split Phones from one column to four
@@ -137,7 +129,7 @@ def clean_phones(df, phones):
 
 
 def fix_zp_dates(df):
-    cols = ['Birth Date', 'Mbr. Begin Date']
+    cols = ['Birth Date', 'Mbr. Begin Date', 'Date Added', 'Last Att. Date', 'Mbr. End Date', 'First Bill Due', 'Next Payment Due Date']
     for x in cols:
         df[x] = pd.to_datetime(df[x])
         df[x].dt.strftime('%m-%d-%Y').astype(str)
@@ -232,3 +224,6 @@ if __name__ == '__main__':
         # Output file
 
         df.to_csv('clean_' + args.filename, index=False, quoting=1)
+        nameonly.to_csv('clean_' + 'nameonly.csv', index=False, quoting=1)
+        address.to_csv('clean_' + 'address.csv', index=False, quoting=1)
+        email.to_csv('clean_' + 'email.csv', index=False, quoting=1)

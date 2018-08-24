@@ -46,8 +46,8 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
      'Att. Limit Type', 'Att. Limit', 'Att. Total', 'Enrollments', 'Primary Location', 'Income Category',
      'Tax2?', 'Taxable?'], axis=1, inplace=True)
 
-    ranks.drop(['Check In Date', 'Time', 'Reservation Date', 'Session Type', 'Attendance Type',
-      'Location', 'Staff Member', 'Rsvp', 'Att.', 'Att. Last 30 Days', 'Att. Since Last Test',
+    ranks.drop(['Reservation Date', 'Session Type', 'Attendance Type',
+      'Location', 'Staff Member', 'Rsvp', 'Att. Last 30 Days', 'Att. Since Last Test',
       'Class Notes', 'Membership', 'Membership Label', 'Begin Date', 'End Date'], axis=1, inplace=True)
 
     bills.drop(['Paid By Staff', 'Sales Rep', 'Income Category', 'Paid Date', 'Paid Month',
@@ -65,14 +65,18 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     # Ranks - If last attendance date = date: preserve, else, drop
 
-    ranks = ranks[ranks['Last Att. Date'] == ranks['Date']]
+    ranks = ranks[(ranks['Last Att. Date'] == ranks['Date']) & (ranks['Att.'] == 'Yes')]
+    ranks['Check In Date'] = ranks['Date'] + " " + ranks['Time']
+    ranks['Check In Date'] = pd.to_datetime(ranks['Check In Date'])
+    ranks = ranks.sort_values('Check In Date', ascending=False).groupby('Full Name', as_index=False).head(1)
+
 
     # Sort out rank systems if necessary (not sure how to do this without manually looking at file)
 
     # Mems - Find duplicates based of name + last attendance date - keep one iwht highest number
 
     #mem = mem.groupby(['Full Name', 'Last Att. Date'], as_index=False).apply(lambda x: x.sort_values(["Number"], ascending = False).reset_index(drop=True))
-    mem = mem.sort_values('Number', ascending=True).groupby(['Full Name', 'Last Att. Date'], as_index=False).head(1)
+    mem = mem.sort_values('Number', ascending=False).groupby(['Full Name', 'Last Att. Date'], as_index=False).head(1)
 
     # Bills
 
@@ -82,6 +86,12 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     bills['Drop Me'], bills['Installments'] = bills['Notes'].str.split('l ', 1).str
     bills['Paid'], bills['Total'] = bills['Installments'].str.split('/', 1).str
     bills['Installments Remaining'] = bills['Total'].apply(pd.to_numeric, errors='ignore') - bills['Paid'].apply(pd.to_numeric, errors='ignore') + 1
+    for i, row in bills.iterrows():
+        if (np.isnan(row['Installments Remaining'])) and (row['Mbr. Status'] == 'COMPLETED'):
+            bills.iloc[i]['Installments Remaining'] = '0'
+            print('success')
+        else:
+            print(row['Installments Remaining'])
     bills.drop(['Drop Me', 'Installments', 'Total', 'Paid', 'Desc', 'Status', 'Purchase Type', 'Bill #', 'Description', 'Notes', 'Subtotal'], inplace=True, axis=1)
     bills.rename(columns={'Due Date': 'Next Payment Due Date'}, inplace=True)
 
@@ -93,6 +103,20 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     complete = pd.merge(con, mem, on=['Last Att. Date', 'Full Name'], how='left')
     complete = pd.merge(complete, ranks, on=['Last Att. Date', 'Full Name'], how='left').drop_duplicates()
     complete = pd.merge(complete, bills, on=['Number'], how='left')
+
+    # if membership category  == foundations, cap, kickboxing, set rank style to Adult
+    # if membership category  == ninjas, warriors, gladiators, set rank style to child
+
+    cols = ['Birth Date', 'Mbr. Begin Date', 'Date Added', 'Last Att. Date', 'Mbr. End Date', 'First Bill Due', 'Next Payment Due Date']
+    for x in cols:
+        complete[x] = pd.to_datetime(complete[x])
+        complete[x].dt.strftime('%m-%d-%Y').astype(str)
+    complete['Phone'] = complete['Phone'].replace(r'[^0-9]','', regex=True)
+
+    replacements = {'Prospect': 'P','Alumni': 'F',
+                    'Student': 'S', np.nan: 'P'}
+
+    complete['Status'] = complete['Status'].map(replacements)
 
     # Output files
 
