@@ -6,6 +6,8 @@ import argparse
 import re
 import software
 import datetime
+import xlrd
+import csv
 
 
 
@@ -164,6 +166,20 @@ def probably_useless(df, df2):
         df = priority.append(outer)
 
 
+def csv_from_excel(path_to_files=os.getcwd()):
+
+    path = path_to_files + '/*.xls*'
+    files = glob.glob(path)
+
+    for i in files:
+        file = os.path.basename(i)
+        filename = os.path.splitext(file)[0]
+        xls_file = pd.read_excel(i, index_col=None, dtype=object)
+        xls_file.to_csv(filename + '.csv',quoting=csv.QUOTE_ALL, index = False)
+
+
+
+
 # If called as executable
 
 if __name__ == '__main__':
@@ -180,6 +196,7 @@ if __name__ == '__main__':
     parser.add_argument('-R', '--noranks', action='store_true',help="Preserve ranks")
     parser.add_argument('-W', '--whitespace', action='store_false',help="Preserve whitespace")
     parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM', 'PM', 'MB', 'ASF', 'ZP'],help='Type of data file, e.g. RM, PM')
+    parser.add_argument('-e', '--extract', action='store_false', help='Convert from Excel to CSV')
     parser.add_argument('filename', help='Csv file to clean')
     args = parser.parse_args()
 
@@ -197,6 +214,7 @@ if __name__ == '__main__':
     elif args.type == 'ASF':
         software.asf.ASFfix()
 
+
     # Handle single file exports and Rainmaker files
 
     elif args.type is None or args.type == 'RM':
@@ -207,6 +225,7 @@ if __name__ == '__main__':
         # Load in file specified by filename
 
         df = load(args.filename, args.filepath)
+
 
         # Apply changes as specified by args
 
@@ -224,6 +243,3 @@ if __name__ == '__main__':
         # Output file
 
         df.to_csv('clean_' + args.filename, index=False, quoting=1)
-        nameonly.to_csv('clean_' + 'nameonly.csv', index=False, quoting=1)
-        address.to_csv('clean_' + 'address.csv', index=False, quoting=1)
-        email.to_csv('clean_' + 'email.csv', index=False, quoting=1)
