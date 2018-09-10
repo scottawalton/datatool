@@ -225,7 +225,7 @@ if __name__ == '__main__':
         # Load in file specified by filename
 
         df = load(args.filename, args.filepath)
-
+        df2 = load('ParentsNames.csv', args.filepath)
 
         # Apply changes as specified by args
 
@@ -239,7 +239,10 @@ if __name__ == '__main__':
 
         if args.type == 'RM':
             df = software.rm.RMfix(df)
+            df = pd.merge(df, df2, on='ID', how='left')
+            df = df.drop_duplicates(keep='first')
+
 
         # Output file
 
-        df.to_csv('clean_' + args.filename, index=False, quoting=1)
+        df.to_csv('clean_' + args.filename, index=True, quoting=1)

@@ -5,7 +5,6 @@ import numpy as np
 import datetime
 from itertools import chain
 
-
 def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     path = path_to_files + '/*.csv'
@@ -29,6 +28,9 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
         if "ClientAutopayContract" in i:
             mem = pd.read_csv(i, index_col=None, dtype=object)
+
+        if 'CustomFields.csv' in i:
+            cus = pd.read_csv(i, index_col=None, dtype=object)
 
 #        if "ClientPricingOption" in i:
 #            mem2 = pd.read_csv(i, index_col=None, dtype=object)
@@ -54,14 +56,17 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
      'AccountPaymentsAllowed', 'AutoPayLimit', 'FirstVisitApptEmailSent','FirstVisitResEmailSent',
      'ReactivatedTime','LockerNo','IsSystem','MeasurementsTaken', 'LiabilityRelBy','LiabilityAgreementDate1',
      'ReferrerID','Longitude','Latitude','LockerDate','LastFormulaNotes','MBFVisitorID','ChangePassword',
-     'ModifiedBy','Modified','PasswordChangeKey','EmailStatus','ConvertedDate', 'QBOID', 'HomeStudio'], axis=1, inplace=True)
+     'ModifiedBy','Modified','PasswordChangeKey','EmailStatus','ConvertedDate', 'QBOID', 'HomeStudio', 'Height',
+     'Bust','Waist','Hip','Girth','Inseam','Head','Shoe','Tights', 'BirthdayEmailSent', 'SourceID', 'LastClass'], axis=1, inplace=True)
 
-    fin.drop(['BillingStreetAddress','BillingCity','BillingState','BillingZip','ccType', 'BarcodeID'], axis=1, inplace=True)
+    fin.drop(['BillingStreetAddress','BillingCity','BillingState','BillingZip', 'BarcodeID'], axis=1, inplace=True)
 
     rel.drop(['RelationID','BarcodeID1', 'BarcodeID2'], axis=1, inplace=True)
 
     mem.drop(['PayerBarcodeID','PayerLastName','PayerFirstName', 'TerminationDate',
     'RunDateTime', 'Contract Agreement Date', 'LocationName', 'AutoPayItemDescription'], axis=1, inplace=True)
+
+    cus.drop(['FirstName', 'LastName', 'BarcodeID'], axis=1, inplace=True)
 
 #    mem2.drop(['BarcodeID','Returned', 'Duration', 'DurationUnit', 'PaymentDataID', 'ItemType',
 #    'NumClasses', 'PaymentAmount', 'Program/Service Category', 'FirstName', 'LastName'], axis=1, inplace=True)
@@ -69,6 +74,41 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
 
     # Clean Up
+
+    # Custom Fields clean up
+
+    def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
+
+        # Create columns based on unique program values
+
+        if programs in df:
+            list = []
+            for x in df[programs].unique():
+                if type(x) == float and np.isnan(x):
+                    pass
+                else:
+                    y = []
+                    y = x.split(', ')
+                    for z in y:
+                        if z not in list:
+                            list.append(z)
+
+        for x in list:
+            df[x] = ""
+
+        # Assign Ranks to respective columns
+
+        for index, x in df[ranks].iteritems():
+
+            new_col = str(df.iloc[index][programs])
+            x = str(x)
+            df.set_value(index, new_col, x)
+
+        # Get rid of 'nan'
+
+        df[df == 'nan'] = np.nan
+
+    fix_ranks(cus, ranks='CustomFieldValue', programs='CustomField')
 
     # Membership file cleanup
     cols = mem.columns.values
@@ -148,13 +188,21 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     mem['Contract Start Date'] = pd.to_datetime(mem['Contract Start Date'])
     mem = mem.sort_values('Contract Start Date', ascending=False).groupby('MBSystemID').head(1)
 
+    # Clean Contacts up
+
+    con.rename(columns={'Male': 'Gender'}, inplace=True)
+    con['Gender'] = con['Gender'].map({'True':'M', 'False': 'F'})
+
+    con.rename(columns={'ReferredBy': 'Source'}, inplace=True)
+
     # Clean notes up
 
-    notes = notes.replace(r'\n', ' ')
+    notes = notes.replace(r'\n',' ', regex=True)
 
     # Financials cleanup
 
     fin.rename(columns={'ClientID': 'MBSystemID'}, inplace=True)
+    fin['IsSavingsAcct'] = fin['IsSavingsAcct'].map({'True':'S', 'False': 'C'})
 
     # Relationships cleanup
 
@@ -171,6 +219,10 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     for i in needs_merge:
         complete = pd.merge(complete, i, on='MBSystemID', how='left')
 
+
+    # Drops empty columns
+    complete.dropna(how='all', axis='columns', inplace=True)
+
     # Output files
 
     try:
@@ -182,9 +234,10 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     mem.name = 'Memberships'
     fin.name = 'Financials'
     rel.name = 'Relationships'
+    cus.name = 'Custom Fields'
     notes.name = 'Notes'
     complete.name = 'Complete_File'
 
-    for i in [con, mem, fin, rel, complete]:
+    for i in [con, mem, fin, rel, cus, notes, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
