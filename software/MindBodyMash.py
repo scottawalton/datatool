@@ -68,6 +68,8 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     cus.drop(['FirstName', 'LastName', 'BarcodeID'], axis=1, inplace=True)
 
+    notes.drop(['FirstName', 'LastName'], axis=1, inplace=True)
+
 #    mem2.drop(['BarcodeID','Returned', 'Duration', 'DurationUnit', 'PaymentDataID', 'ItemType',
 #    'NumClasses', 'PaymentAmount', 'Program/Service Category', 'FirstName', 'LastName'], axis=1, inplace=True)
 
@@ -180,7 +182,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Credit Card', 'CC')
     mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('ACH', 'EFT')
     mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Debit Account', 'CC')
-    mem.drop('ContractDeleted', axis=1, inplace=True)
+    mem.drop(['ContractDeleted','RecLastname','RecFirstname', 'BarcodeID', 'AutopayDeleted'], axis=1, inplace=True)
     mem.rename(columns={'ContractName': 'Current Program'}, inplace=True)
 
     # Get Most recent Membership by Start Date -- we can only import primary memberships at this time :(
@@ -197,6 +199,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     # Clean notes up
 
+    notes = notes.groupby('MBSystemID').agg({'Notes':' - '.join}).reset_index()
     notes = notes.replace(r'\n',' ', regex=True)
 
     # Financials cleanup
@@ -219,9 +222,35 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     for i in needs_merge:
         complete = pd.merge(complete, i, on='MBSystemID', how='left')
 
-
     # Drops empty columns
     complete.dropna(how='all', axis='columns', inplace=True)
+
+    # Create Contact Type column
+
+    complete['Contact Type'] = ''
+    complete['Contract End Date'] = complete['Contract End Date'].astype('datetime64')
+    for index, row in complete.iterrows():
+        if row['IsProspect'] == 'True':
+            complete.at[index, 'Contact Type'] = 'P'
+        elif row['Inactive'] == 'True':
+            complete.at[index, 'Contact Type'] = 'F'
+        elif pd.notna(row['Contract End Date']):
+            if row['Contract End Date'] < datetime.datetime.today():
+                complete.at[index, 'Contact Type'] = 'F'
+            else:
+                complete.at[index, 'Contact Type'] = 'S'
+        else:
+            complete.at[index, 'Contact Type'] = 'P'
+
+    for index, row in complete.iterrows():
+        if row['Autorenewing'] == 'True' and pd.notna(row['Contract End Date']):
+            complete.at[index, 'Contract End Date'] = '2099-12-31'
+            complete.at[index, 'Payments Remaining'] = '9999'
+
+    complete.drop(['Autorenewing', 'Inactive', 'IsProspect', 'ID'], axis=1, inplace=True)
+
+    complete['Billing Company'] = np.where(complete['PaymentMethod'].notnull(), 'autoCharge', '')
+    complete.drop_duplicates(inplace=True)
 
     # Output files
 
@@ -241,3 +270,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     for i in [con, mem, fin, rel, cus, notes, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
+
+    # An alert to let you know when it is finished (because it takes forever)
+
+    print('\a')
