@@ -250,6 +250,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     complete.drop(['Autorenewing', 'Inactive', 'IsProspect', 'ID'], axis=1, inplace=True)
 
     complete['Billing Company'] = np.where(complete['PaymentMethod'].notnull(), 'autoCharge', '')
+    complete['Payment Frequency'] = np.where(complete['PaymentMethod'].notnull(), '30', '')
     complete.drop_duplicates(inplace=True)
 
     # Output files
