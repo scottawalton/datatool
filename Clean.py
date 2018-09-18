@@ -195,7 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--filepath', default=os.getcwd(), type=str, metavar='', help='Path to file')
     parser.add_argument('-R', '--noranks', action='store_true',help="Preserve ranks")
     parser.add_argument('-W', '--whitespace', action='store_false',help="Preserve whitespace")
-    parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM', 'PM', 'MB', 'ASF', 'ZP'],help='Type of data file, e.g. RM, PM')
+    parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM','KS', 'PM', 'MB', 'ASF', 'ZP'],help='Type of data file, e.g. RM, PM')
     parser.add_argument('-e', '--extract', action='store_false', help='Convert from Excel to CSV')
     parser.add_argument('filename', help='Csv file to clean')
     args = parser.parse_args()
@@ -210,6 +210,9 @@ if __name__ == '__main__':
 
     elif args.type == 'MB':
         software.mb.MBfix()
+
+    elif args.type == 'KS':
+        software.ks.KicksiteMash()
 
     elif args.type == 'ASF':
         software.asf.ASFfix()
