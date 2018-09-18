@@ -174,8 +174,20 @@ def csv_from_excel(path_to_files=os.getcwd()):
     for i in files:
         file = os.path.basename(i)
         filename = os.path.splitext(file)[0]
-        xls_file = pd.read_excel(i, index_col=None, dtype=object)
-        xls_file.to_csv(filename + '.csv',quoting=csv.QUOTE_ALL, index = False)
+        xls_file = pd.ExcelFile(i, index_col=None, dtype=object)
+        if len(xls_file.sheet_names) > 1:
+            try:
+                os.mkdir(filename)
+            except:
+                print('blahhhh')
+                pass
+            for i in xls_file.sheet_names:
+                file = pd.read_excel(xls_file, i, index_col=None, dtype=object)
+                file.to_csv(filename + '/' + i + '.csv', quoting=csv.QUOTE_ALL, index = False)
+
+        else:
+            print(len(xls_file.sheet_names))
+            xls_file.to_csv('clean/' + filename + '.csv',quoting=csv.QUOTE_ALL, index = False)
 
 
 
@@ -217,6 +229,8 @@ if __name__ == '__main__':
     elif args.type == 'ASF':
         software.asf.ASFfix()
 
+    elif args.extract == False:
+        csv_from_excel(path_to_files=os.getcwd())
 
     # Handle single file exports and Rainmaker files
 
@@ -228,8 +242,6 @@ if __name__ == '__main__':
         # Load in file specified by filename
 
         df = load(args.filename, args.filepath)
-        df2 = load('ParentsNames.csv', args.filepath)
-
 
 
         # Apply changes as specified by args
@@ -244,8 +256,6 @@ if __name__ == '__main__':
 
         if args.type == 'RM':
             df = software.rm.RMfix(df)
-            df = pd.merge(df, df2, how='left', on='ID')
-            df.drop_duplicates(keep='first', inplace=True)
 
 
         # Output file

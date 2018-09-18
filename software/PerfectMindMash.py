@@ -4,6 +4,50 @@ import sys, os
 import numpy as np
 
 
+def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
+
+    # Create columns based on unique program values
+
+    if programs in df:
+        list = []
+        for x in df[programs].unique():
+            if type(x) == float and np.isnan(x):
+                pass
+            else:
+                y = []
+                y = x.split(', ')
+                for z in y:
+                    if z not in list:
+                        list.append(z)
+
+    for x in list:
+        df[x] = ""
+
+    # Assign Ranks to respective columns
+
+    for index, x in df[ranks].iteritems():
+
+        new_col = str(df.iloc[index][programs])
+        x = str(x)
+
+        # If there are commas
+
+        if ',' in new_col or x:
+            new_col = new_col.split(', ')
+            x = x.split(', ')
+
+            for rank, col in zip(x, new_col):
+                df.set_value(index, col, rank)
+
+        # No commas
+
+        else:
+           df.set_value(index, new_col, x)
+
+    # Get rid of 'nan'
+
+    df[df == 'nan'] = np.nan
+
 def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
 
@@ -39,18 +83,27 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     # Drop columns we can' use
 
     con.drop(['LeadLeadAge', 'MissedPayment', 'FullNameSimple', 'BecameClient', 'BecameFormerClient',
-    'ContactedDate', 'Featured', 'StripesAwarded', 'ClassesSinceLastExam', 'RelatedContactEmail2', 'PointstoBlackBelt',
-    'Medical', 'InfoDueby', 'NeedInfo', 'MiddleName', 'Employer'], axis=1, inplace=True, errors='ignore')
+    'ContactedDate', 'Featured', 'StripesAwarded', 'ClassesSinceLastExam', 'PointstoBlackBelt',
+    'Medical', 'InfoDueby', 'NeedInfo', 'MiddleName', 'Employer', 'Age', 'IsPrimaryContactForAccount', 'Rating', 'ImportId', ], axis=1, inplace=True, errors='ignore')
 
     ranks.drop(['PromotionId', 'ClassesAttended', 'NextRankPromotionDate', 'IsRankReady', 'ClassesSinceLastRankPromotion', 'CurrentStripe',
-    'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder'], axis=1, inplace=True, errors='ignore')
+    'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder', 'FullNameSimple'], axis=1, inplace=True, errors='ignore')
 
     fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber'], axis=1, inplace=True, errors='ignore')
 
     mem.drop(['Finance Info Record', 'Transaction Record', 'TotalAmount', 'RemainingBalance', 'DelinquentAmount',
     'OnHold', 'FirstPayment', 'FinalPayment', 'Ongoing', 'SubTotal', 'TAXONE', 'Tax', 'DelinquentSince',
-    'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays'], axis=1, inplace=True, errors='ignore')
+    'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays', 'LastName',
+    'FirstName', 'NextPaymentAmount', 'CancellationDate'], axis=1, inplace=True, errors='ignore')
 
+
+    # clean contacts
+
+    con['Type'].replace({'Lead': 'P', 'Former student':"F", 'Active student': 'S'}, inplace=True)
+    con['PrimaryPhone'].replace({'Primary Phone': 'Mobile', 'Home ': 'Home'}, inplace=True)
+    fix_ranks(con, ranks='PrimaryNumber', programs='PrimaryPhone')
+    fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
+    con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber'], axis=1, inplace=True)
 
     # clean up financials // sort down to most recent & reliable card, keep only that ContactRecord
 
@@ -58,6 +111,7 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     for i in numcols:
         fin[i] = fin[i].str.replace(r'[^0-9]', '')
+        fin[i].replace('', np.nan, inplace=True)
 
     fin.sort_values(['RecordName', 'Status', 'Default', 'ExpiryYear', 'ExpiryMonth'],ascending=[True, False, False, False, False], inplace=True)
 
@@ -68,7 +122,7 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     fix_ranks(ranks, ranks='Rank', programs='Program')
     ranks.sort_values(['RecordName','ProgramEnrollmentDate'], ascending=[True, False], inplace=True)
-    ranks.drop(['Rank', 'Program'], axis=1, inplace=True)
+    ranks.drop(['Rank', 'Program', 'ProgramEnrollmentDate'], axis=1, inplace=True)
 
 
     ColDict = {}
@@ -88,6 +142,8 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     mem = mem.groupby('RecordName', as_index=False).nth(0)
     mem.name = 'Memberships'
 
+    mem['Billing Company'].replace({'Billing Direct': 'autoCharge', 'In-House':"In House"}, inplace=True)
+
     # Need to fill null expire with 2099
 
     # Merge files
@@ -100,6 +156,10 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
         complete = pd.merge(complete, x, on=key, how='left')
     complete.name = 'Complete_File'
 
+    m1 = complete['Billing Company'] =='In House'
+    m2 = complete['AccountNumber'] != np.nan
+    m3 = complete['CreditCardNumber'] != np.nan
+    complete['Payment Method'] = np.select([m1, m2, m3], ['In House', 'EFT','CC'], '')
 
     try:
         os.mkdir('clean')
