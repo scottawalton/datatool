@@ -2,7 +2,6 @@ import pandas as pd
 import glob
 import sys, os
 import numpy as np
-from Clean import fix_ranks
 
 
 def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
