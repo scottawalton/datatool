@@ -158,7 +158,9 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
                 mostRecent = tempFuture.sort_values('ScheduleDate', ascending=True).head(1).values.tolist()
                 mostRecent = list(chain.from_iterable(mostRecent))
                 if mostRecent != []:
-                    new_mem.append(mostRecent)
+                    new_mem = new_mem.append(mostRecent)
+
+                    ## NEED TO REVIEW ^^^^
 
             else:
 
@@ -166,7 +168,9 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
                 mostRecent = tempPast.sort_values('ScheduleDate', ascending=False).head(1).values.tolist()
                 mostRecent = list(chain.from_iterable(mostRecent))
                 if mostRecent != []:
-                    new_mem.append(mostRecent)
+                    new_mem = new_mem.append(mostRecent)
+
+                    ## NEED TO REVIEW ^^^^
 
     # Create new Memberships DB from New_Mem
 
