@@ -2,51 +2,7 @@ import pandas as pd
 import glob
 import sys, os
 import numpy as np
-
-
-def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
-
-    # Create columns based on unique program values
-
-    if programs in df:
-        list = []
-        for x in df[programs].unique():
-            if type(x) == float and np.isnan(x):
-                pass
-            else:
-                y = []
-                y = x.split(', ')
-                for z in y:
-                    if z not in list:
-                        list.append(z)
-
-    for x in list:
-        df[x] = ""
-
-    # Assign Ranks to respective columns
-
-    for index, x in df[ranks].iteritems():
-
-        new_col = str(df.iloc[index][programs])
-        x = str(x)
-
-        # If there are commas
-
-        if ',' in new_col or x:
-            new_col = new_col.split(', ')
-            x = x.split(', ')
-
-            for rank, col in zip(x, new_col):
-                df.set_value(index, col, rank)
-
-        # No commas
-
-        else:
-           df.set_value(index, new_col, x)
-
-    # Get rid of 'nan'
-
-    df[df == 'nan'] = np.nan
+import procedures
 
 def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
@@ -101,9 +57,11 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     con['Type'].replace({'Lead': 'P', 'Former student':"F", 'Active student': 'S'}, inplace=True)
     con['PrimaryPhone'].replace({'Primary Phone': 'Mobile', 'Home ': 'Home'}, inplace=True)
-    fix_ranks(con, ranks='PrimaryNumber', programs='PrimaryPhone')
-    fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
+    procedures.fix_ranks(con, ranks='PrimaryNumber', programs='PrimaryPhone')
+    procedures.fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
     con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber'], axis=1, inplace=True)
+    for i in ['Work', 'Mobile', 'Home']:
+        procedures.clean_phones(con, i)
 
     # clean up financials // sort down to most recent & reliable card, keep only that ContactRecord
 
@@ -120,7 +78,7 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     # fix ranks columns
 
-    fix_ranks(ranks, ranks='Rank', programs='Program')
+    procedures.fix_ranks(ranks, ranks='Rank', programs='Program')
     ranks.sort_values(['RecordName','ProgramEnrollmentDate'], ascending=[True, False], inplace=True)
     ranks.drop(['Rank', 'Program', 'ProgramEnrollmentDate'], axis=1, inplace=True)
 
@@ -156,10 +114,11 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
         complete = pd.merge(complete, x, on=key, how='left')
     complete.name = 'Complete_File'
 
-    m1 = complete['Billing Company'] =='In House'
-    m2 = complete['AccountNumber'] != np.nan
-    m3 = complete['CreditCardNumber'] != np.nan
-    complete['Payment Method'] = np.select([m1, m2, m3], ['In House', 'EFT','CC'], '')
+    # decide payment method
+    complete['Payment Method'] = np.where(complete['Billing Company'] =='In House','In House',
+                                        np.where(complete['AccountNumber'].notnull(),'EFT',
+                                                np.where(complete['CreditCardNumber'].notnull(),'CC', '')))
+
 
     try:
         os.mkdir('clean')
