@@ -59,22 +59,20 @@ if __name__ == '__main__':
 
         # Load in file specified by filename
 
-        df = load(args.filename, args.filepath)
-
+        df = procedures.load(args.filename, args.filepath)
 
         # Apply changes as specified by args
 
         if args.noranks:
-            fix_ranks(df, args.ranks, args.programs)
+            procedures.fix_ranks(df, args.ranks, args.programs)
 
         if args.whitespace:
-            strip_whitespace(df)
+            procedures.strip_whitespace(df)
 
         # Handle RainMaker files
 
         if args.type == 'RM':
             df = software.rm.RMfix(df)
-
 
         # Output file
 

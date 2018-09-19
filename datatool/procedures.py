@@ -22,6 +22,7 @@ def load(filename, filepath):
             df = pd.read_csv(data, index_col=None, dtype=object, encoding="ISO-8859-1" )
             return df
 
+
 def csv_from_excel(path_to_files=os.getcwd()):
 
     path = path_to_files + '/*.xls*'
@@ -96,7 +97,6 @@ def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
     # Get rid of 'nan'
 
     df[df == 'nan'] = np.nan
-
 
 
 def split_phones(df, phones):

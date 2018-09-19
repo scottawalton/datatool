@@ -70,6 +70,7 @@ def RMfix(df):
             fill_null()
 
 
+
     # Fix Expire Dates before 1/1/2000
 
     for index, x in df['Current_Program_Expires'].iteritems():
@@ -93,5 +94,10 @@ def RMfix(df):
                 'First_Payment_Due_Date', 'last_payment_date', 'Date_to_Take_Payment', 'Middle_Init'], axis=1)
 
     df.dropna(how='all', axis='columns', inplace=True)
+
+    # This should have been included -- may need to revise the entire procedure for optmization
+
+    df['Billing_Company'] = np.where((df['Payment_Method'] == 'In House') & (df['Billing_Company'].isnull()), 'In House', df['Billing_Company'])
+    df['Billing_Company'] = np.where((df['Payment_Method'] == 'PIF') & (df['Billing_Company'].isnull()), 'PIF', df['Billing_Company'])
 
     return df
