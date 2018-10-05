@@ -114,9 +114,9 @@ def split_phones(df, phones):
 
 # Remove non numberic characters from phone numbers
 
-def clean_phones(df, phones):
+def clean_phones(df, phones='Phone'):
     df[phones] = df[phones].replace(r'[^0-9]','', regex=True)
-    print(df[phones])
+    print('Successfully cleaned ' + phones + ' column')
 
 def split_emails(df, emails):
 
@@ -126,21 +126,39 @@ def split_emails(df, emails):
     df['Email 2'] = df['Emails'].str.extract('.*@.*\....,\s(.*@.*\....)',expand=True)
     df['Email 3'] = df['Emails'].str.extract('.*@.*\....,\s.*@.*\....,\s(.*@.*\....)',expand=True)
 
-def fix_zp_dates(df):
-    cols = ['Birth Date', 'Mbr. Begin Date', 'Date Added', 'Last Att. Date', 'Mbr. End Date', 'First Bill Due', 'Next Payment Due Date']
-    for x in cols:
+def fix_zp_dates(df, col=None):
+    if col == None:
+        cols = ['Birth Date', 'Inquiry Date', 'Last Att. Date']
+        for x in cols:
+            df[x] = pd.to_datetime(df[x])
+            df[x].dt.strftime('%m-%d-%Y').astype(str)
+    else:
+        x = col
         df[x] = pd.to_datetime(df[x])
         df[x].dt.strftime('%m-%d-%Y').astype(str)
 
-def strip_whitespace(df):
+def strip_whitespace(df, column=None):
 
     # Strips all leading whitespace and newline chars
+    c = column
 
-    for c in df.columns:
+    if c == None:
+        for c in df.columns:
+            if df[c].dtypes == object:
+                df[c] = pd.core.strings.str_strip(df[c])
+                df[c] = df[c].str.replace('\n', '')
+                df[c] = df[c].str.replace(r'\r',' ', regex=True)
+                df[c] = df[c].str.replace(r'\n',' ', regex=True)
+                df[c] = df[c].str.replace(r'\v',' ', regex=True)
+    else:
         if df[c].dtypes == object:
             df[c] = pd.core.strings.str_strip(df[c])
-            df[c] = df[c].str.replace('\n', '')
+            df[c] = df[c].str.replace(r'\r',' ', regex=True)
+            df[c] = df[c].str.replace(r'\n',' ', regex=True)
+            df[c] = df[c].str.replace(r'\v',' ', regex=True)
 
+
+    return df
 
 # If members are given in a comma seperated list, seperate into seperate columns
 
@@ -192,3 +210,28 @@ def probably_useless(df, df2):
             if i in priority.index.values:
                 print('what')
         df = priority.append(outer)
+
+def merge_parents(df, df2, first1='First Name', last1='Last Name', first2=None, last2=None):
+
+    if first2 == None:
+        first2 = first1
+    if last2 == None:
+        last2 = last1
+        
+    for i in df['Mother'].str.upper().tolist():
+        if not(isinstance(i, float)):
+            for index, row in df3.iterrows():
+                if row['First Name'].upper() in i and row['Last Name'].upper() in i:
+                    parents = parents.append(row)
+
+    for i in df['Father'].str.upper().tolist():
+        if not(isinstance(i, float)):
+            for index, row in df3.iterrows():
+                if row['First Name'].upper() in i and row['Last Name'].upper() in i:
+                    parents = parents.append(row)
+
+    for i in df['Full Name'].str.upper().tolist():
+        if not(isinstance(i, float)):
+            for index, row in df3.iterrows():
+                if row['First Name'].upper() in i and row['Last Name'].upper() in i:
+                    adults = adults.append(row)

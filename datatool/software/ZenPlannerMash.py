@@ -24,7 +24,7 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
         if "Attendance" in i:
             ranks = pd.read_csv(i, index_col=None, dtype=object)
 
-        if "Bills" in i:
+        if "Bill" in i:
             bills = pd.read_csv(i, index_col=None, dtype=object)
 
 
@@ -85,7 +85,9 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     bills = bills.sort_values('Bill #', ascending=True).groupby('Number', as_index=False).head(1)
     bills['Drop Me'], bills['Installments'] = bills['Notes'].str.split('l ', 1).str
     bills['Paid'], bills['Total'] = bills['Installments'].str.split('/', 1).str
-    bills['Installments Remaining'] = bills['Total'].apply(pd.to_numeric, errors='ignore') - bills['Paid'].apply(pd.to_numeric, errors='ignore') + 1
+    bills['Total'] = bills['Total'].str.replace('\s\(prorated\)', '', regex=True)
+    bills['Total'] = bills['Total'].str.replace('\s\(signup fee\)', '', regex=True)
+    bills['Installments Remaining'] = bills['Total'].astype(int) - bills['Paid'].astype(int) + 1
     for i, row in bills.iterrows():
         if (np.isnan(row['Installments Remaining'])) and (row['Mbr. Status'] == 'COMPLETED'):
             bills.iloc[i]['Installments Remaining'] = '0'
@@ -100,9 +102,18 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     # Merge files
 
-    complete = pd.merge(con, mem, on=['Last Att. Date', 'Full Name'], how='left')
-    complete = pd.merge(complete, ranks, on=['Last Att. Date', 'Full Name'], how='left').drop_duplicates()
-    complete = pd.merge(complete, bills, on=['Number'], how='left')
+    colsToUse = mem.columns.difference(con.columns).tolist()
+    colsToUse.extend(['Last Att. Date', 'Full Name'])
+    complete = pd.merge(con, mem[colsToUse], on=['Last Att. Date', 'Full Name'], how='left')
+
+
+    colsToUse = ranks.columns.difference(complete.columns).tolist()
+    colsToUse.extend(['Last Att. Date', 'Full Name'])
+    complete = pd.merge(complete, ranks[colsToUse], on=['Last Att. Date', 'Full Name'], how='left').drop_duplicates()
+
+    colsToUse = bills.columns.difference(complete.columns).tolist()
+    colsToUse.append('Number')
+    complete = pd.merge(complete, bills[colsToUse], on=['Number'], how='left')
 
     # if membership category  == foundations, cap, kickboxing, set rank style to Adult
     # if membership category  == ninjas, warriors, gladiators, set rank style to child
@@ -111,12 +122,21 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     for x in cols:
         complete[x] = pd.to_datetime(complete[x])
         complete[x].dt.strftime('%m-%d-%Y').astype(str)
-    complete['Phone'] = complete['Phone'].replace(r'[^0-9]','', regex=True)
+
+    phones = ['Home Phone','Cell Phone', 'Phone']
+    for phone in phones:
+        complete[phone] = complete[phone].replace(r'[^0-9]','', regex=True)
 
     replacements = {'Prospect': 'P','Alumni': 'F',
                     'Student': 'S', np.nan: 'P'}
 
     complete['Status'] = complete['Status'].map(replacements)
+
+    complete.drop(['Birth Month','Birth Day','Interest (sub)','Referred By','Last Updated','Last Log Entry',
+    'Tracking Source','Tracking Name','Tracking Medium','Tracking Keywords', 'Primary Location','Signup Fee?',
+    'Autopay Account','Autopay Approved By','Autopay Approved Date','Time','Type','Weekday','Long Date','Check In Date',
+    'Date','Date / Time','BirthDate','Att.','Validated?','Primary Instructor','Prospect Priority','Prospect Status',
+    'Prospect Status (sub)','Sales Rep','Acct Name','Age','Auto Renew','Autopay Available?'], axis=1, inplace=True, errors='ignore')
 
     # Output files
 

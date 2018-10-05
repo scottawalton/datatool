@@ -4,6 +4,7 @@ import sys, os
 import numpy as np
 import datetime
 from itertools import chain
+import procedures
 
 def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
@@ -79,38 +80,11 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     # Custom Fields clean up
 
-    def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
+    procedures.fix_ranks(cus, ranks='CustomFieldValue', programs='CustomField')
+    for i in cus['CustomField'].unique().tolist():
+        cus = cus.groupby('MBSystemID', as_index=False).sum()
 
-        # Create columns based on unique program values
-
-        if programs in df:
-            list = []
-            for x in df[programs].unique():
-                if type(x) == float and np.isnan(x):
-                    pass
-                else:
-                    y = []
-                    y = x.split(', ')
-                    for z in y:
-                        if z not in list:
-                            list.append(z)
-
-        for x in list:
-            df[x] = ""
-
-        # Assign Ranks to respective columns
-
-        for index, x in df[ranks].iteritems():
-
-            new_col = str(df.iloc[index][programs])
-            x = str(x)
-            df.set_value(index, new_col, x)
-
-        # Get rid of 'nan'
-
-        df[df == 'nan'] = np.nan
-
-    fix_ranks(cus, ranks='CustomFieldValue', programs='CustomField')
+    cus.drop(['CustomFieldValue','CustomField', 'BarcodeID','FirstName','LastName'], axis=1, inplace=True, errors='ignore')
 
     # Membership file cleanup
     cols = mem.columns.values
@@ -158,7 +132,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
                 mostRecent = tempFuture.sort_values('ScheduleDate', ascending=True).head(1).values.tolist()
                 mostRecent = list(chain.from_iterable(mostRecent))
                 if mostRecent != []:
-                    new_mem = new_mem.append(mostRecent)
+                    new_mem.append(mostRecent)
 
                     ## NEED TO REVIEW ^^^^
 
@@ -168,7 +142,9 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
                 mostRecent = tempPast.sort_values('ScheduleDate', ascending=False).head(1).values.tolist()
                 mostRecent = list(chain.from_iterable(mostRecent))
                 if mostRecent != []:
-                    new_mem = new_mem.append(mostRecent)
+                    new_mem.append(mostRecent)
+
+
 
                     ## NEED TO REVIEW ^^^^
 
@@ -203,9 +179,9 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     # Clean notes up
 
+    notes.dropna(subset=['Notes'], inplace=True)
     notes = notes.groupby('MBSystemID').agg({'Notes':' - '.join}).reset_index()
-    notes = notes.replace(r'\n',' ', regex=True)
-
+    procedures.strip_whitespace(notes, column='Notes')
     # Financials cleanup
 
     fin.rename(columns={'ClientID': 'MBSystemID'}, inplace=True)
@@ -220,7 +196,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     # Merge files
 
-    needs_merge = [mem, fin, rel, notes]
+    needs_merge = [mem, fin, rel, notes, cus]
     complete = con
 
     for i in needs_merge:
