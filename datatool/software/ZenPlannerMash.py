@@ -77,23 +77,34 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     #mem = mem.groupby(['Full Name', 'Last Att. Date'], as_index=False).apply(lambda x: x.sort_values(["Number"], ascending = False).reset_index(drop=True))
     mem = mem.sort_values('Number', ascending=False).groupby(['Full Name', 'Last Att. Date'], as_index=False).head(1)
+    mem['Payment Amount'] = mem['Payment Amount'].replace(r'^\$', '', regex=True)
 
     # Bills
 
     bills['Desc'], bills['Number'] = bills['Description'].str.split(' #', 1).str
-    bills = bills[(bills['Purchase Type'] == 'Membership') & (bills['Status'] == 'UNPAID')]
+    bills = bills[bills['Purchase Type'] == 'Membership']
     bills = bills.sort_values('Bill #', ascending=True).groupby('Number', as_index=False).head(1)
     bills['Drop Me'], bills['Installments'] = bills['Notes'].str.split('l ', 1).str
     bills['Paid'], bills['Total'] = bills['Installments'].str.split('/', 1).str
     bills['Total'] = bills['Total'].str.replace('\s\(prorated\)', '', regex=True)
     bills['Total'] = bills['Total'].str.replace('\s\(signup fee\)', '', regex=True)
-    bills['Installments Remaining'] = bills['Total'].astype(int) - bills['Paid'].astype(int) + 1
+    bills['Paid'] = np.where(bills['Paid'] == np.nan, '0', bills['Paid'])
+    bills['Total'] = np.where(bills['Total'] == np.nan, '0', bills['Total'])
+    bills['Installments Remaining'] = np.where((bills['Total'].notna()) & (bills['Paid'].notna()),
+                                                bills['Total'].astype(float) - bills['Paid'].astype(float),
+                                                np.nan)
+    bills['Installments Remaining'] = np.where(bills['Status'] == 'UNPAID',
+                                    bills['Installments Remaining'].astype(float) + 1,
+                                    bills['Installments Remaining'])
+
     for i, row in bills.iterrows():
-        if (np.isnan(row['Installments Remaining'])) and (row['Mbr. Status'] == 'COMPLETED'):
+        if (row['Installments Remaining'] == np.nan) and (row['Mbr. Status'] == 'COMPLETED'):
             bills.iloc[i]['Installments Remaining'] = '0'
             print('success')
         else:
             print(row['Installments Remaining'])
+
+
     bills.drop(['Drop Me', 'Installments', 'Total', 'Paid', 'Desc', 'Status', 'Purchase Type', 'Bill #', 'Description', 'Notes', 'Subtotal'], inplace=True, axis=1)
     bills.rename(columns={'Due Date': 'Next Payment Due Date'}, inplace=True)
 

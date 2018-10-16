@@ -30,8 +30,11 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
         if "ClientAutopayContract" in i:
             mem = pd.read_csv(i, index_col=None, dtype=object)
 
-        if 'CustomFields.csv' in i:
+        if 'CustomFields' in i:
             cus = pd.read_csv(i, index_col=None, dtype=object)
+
+        if 'ClientIndexes' in i:
+            ind = pd.read_csv(i, index_col=None, dtype=object)
 
 #        if "ClientPricingOption" in i:
 #            mem2 = pd.read_csv(i, index_col=None, dtype=object)
@@ -77,6 +80,12 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
 
     # Clean Up
+
+    ind = ind[ind['IndexName'].str.contains('Belt')]
+
+    ind.drop(['BarcodeID', 'FirstName','LastName'], axis=1, inplace=True)
+
+    ind = ind[ind['IndexValue'].str.contains('Yes')]
 
     # Custom Fields clean up
 
@@ -196,7 +205,7 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     # Merge files
 
-    needs_merge = [mem, fin, rel, notes, cus]
+    needs_merge = [mem, fin, rel, notes, cus, ind]
     complete = con
 
     for i in needs_merge:
@@ -246,9 +255,10 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     rel.name = 'Relationships'
     cus.name = 'Custom Fields'
     notes.name = 'Notes'
+    ind.name = 'Ranks'
     complete.name = 'Complete_File'
 
-    for i in [con, mem, fin, rel, cus, notes, complete]:
+    for i in [con, mem, fin, rel, cus, notes, ind, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
 
