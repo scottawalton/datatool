@@ -217,7 +217,7 @@ def merge_parents(df, df2, first1='First Name', last1='Last Name', first2=None, 
         first2 = first1
     if last2 == None:
         last2 = last1
-        
+
     for i in df['Mother'].str.upper().tolist():
         if not(isinstance(i, float)):
             for index, row in df3.iterrows():

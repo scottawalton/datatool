@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--filepath', default=os.getcwd(), type=str, metavar='', help='Path to file')
     parser.add_argument('-R', '--noranks', action='store_true',help="Preserve ranks")
     parser.add_argument('-W', '--whitespace',help="Preserve whitespace")
-    parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM','KS', 'PM', 'MB', 'ASF', 'ZP'],help='Type of data file, e.g. RM, PM')
+    parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM','KS', 'PM', 'MB', 'ASF', 'ZP', 'MS'],help='Type of data file, e.g. RM, PM')
     parser.add_argument('-e', '--extract', action='store_false', help='Convert from Excel to CSV')
     parser.add_argument('filename', help='Csv file to clean')
     args = parser.parse_args()
@@ -42,13 +42,16 @@ if __name__ == '__main__':
         software.mb.MBfix()
 
     elif args.type == 'KS':
-        software.ks.KicksiteMash()
+        software.ks.KSfix()
 
     elif args.type == 'ASF':
         software.asf.ASFfix()
 
+    elif args.type == 'MS':
+        software.ms.MSfix()
+
     elif args.extract == False:
-        csv_from_excel(path_to_files=os.getcwd())
+        procedures.csv_from_excel(path_to_files=os.getcwd())
 
     # Handle single file exports and Rainmaker files
 
@@ -59,7 +62,7 @@ if __name__ == '__main__':
 
         # Load in file specified by filename
 
-        df = procedures.load(args.filename, args.filepath)
+        procedures.csv_from_excel()
 
         # Apply changes as specified by args
 
@@ -75,5 +78,5 @@ if __name__ == '__main__':
             df = software.rm.RMfix(df)
 
         # Output file
-        df.to_csv('clean_' + args.filename + '.csv', index=False, quoting=1)
+        #df.to_csv('clean_' + args.filename + '.csv', index=False, quoting=1)
         print('\a')

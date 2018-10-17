@@ -2,30 +2,9 @@ import pandas as pd
 import glob
 import sys, os
 import numpy as np
+import procedures
 
-
-def split_phones(df, phones): ## From Clean.py
-
-    # Split Phones from one column to four
-
-    df['Mobile'] = df['Phone Numbers'].str.extract('(...-...-....)\(M\)',expand=True)
-    df['Mobile 2'] = df['Phone Numbers'].str.extract('...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
-    df['Mobile 3'] = df['Phone Numbers'].str.extract('...-...-....\(M\).*?...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
-    df['Home'] = df['Phone Numbers'].str.extract('(...-...-....)\(H\)',expand=True)
-    df['Mobile'] = df['Phone Numbers'].str.extract('(...-...-....)\(C\)',expand=True)
-    df['Mobile 2'] = df['Phone Numbers'].str.extract('...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
-    df['Mobile 3'] = df['Phone Numbers'].str.extract('...-...-....\(C\).*?...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
-    df = df.drop('Phone Numbers', 1)
-
-def split_emails(df, emails): ## From Clean.py
-
-    # Split Emails from one column to three
-
-    df['Email'] = df['Emails'].str.extract('(.*?@.*?\....),?',expand=True)
-    df['Email 2'] = df['Emails'].str.extract('.*@.*\....,\s(.*@.*\....)',expand=True)
-    df['Email 3'] = df['Emails'].str.extract('.*@.*\....,\s.*@.*\....,\s(.*@.*\....)',expand=True)
-
-def KicksiteMash(path_to_files=os.getcwd(), key='Id', **kwargs):
+def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
 
 
     path = path_to_files + '/*.csv'
@@ -99,8 +78,8 @@ def KicksiteMash(path_to_files=os.getcwd(), key='Id', **kwargs):
         sheet['Gender'].replace({'Female': 'F', 'Male':"M"}, inplace=True)
         if 'Guardians' in sheet.columns.values:
             sheet['Guardians'], sheet['Guardian 2'] = sheet['Guardians'].str.split(',', 1).str
-            split_phones(sheet, 'Phone Numbers')
-            split_emails(sheet, 'Emails')
+            procedures.split_phones(sheet, 'Phone Numbers')
+            procedures.split_emails(sheet, 'Emails')
             sheet.drop(['Emails', 'Phone Numbers'], axis=1, inplace=True)
             phone_cols = ['Mobile', 'Mobile 2', 'Mobile 3', 'Home', 'SMS Phone']
             for phone in phone_cols:

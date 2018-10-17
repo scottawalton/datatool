@@ -40,17 +40,20 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     con.drop(['LeadLeadAge', 'MissedPayment', 'FullNameSimple', 'BecameClient', 'BecameFormerClient',
     'ContactedDate', 'Featured', 'StripesAwarded', 'ClassesSinceLastExam', 'PointstoBlackBelt',
-    'Medical', 'InfoDueby', 'NeedInfo', 'MiddleName', 'Employer', 'Age', 'IsPrimaryContactForAccount', 'Rating', 'ImportId', ], axis=1, inplace=True, errors='ignore')
+    'Medical', 'InfoDueby', 'NeedInfo', 'MiddleName', 'Employer', 'Age', 'IsPrimaryContactForAccount',
+    'Rating', 'ImportId', 'Description','EnrollmentDate', 'CancelledDate','AltId','LastExam'
+    'Call2Date','Call2Completed','Call4Date','Call4Completed','Call6Date','Call6Completed','MembershipExpiry',
+    'LeadRating','LeadStatus','LastPromotion','Transferredto','LastExam','Call2Date'], axis=1, inplace=True, errors='ignore')
 
     ranks.drop(['PromotionId', 'ClassesAttended', 'NextRankPromotionDate', 'IsRankReady', 'ClassesSinceLastRankPromotion', 'CurrentStripe',
     'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder', 'FullNameSimple'], axis=1, inplace=True, errors='ignore')
 
-    fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber'], axis=1, inplace=True, errors='ignore')
+    fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber','Student Last Name','Student First Name'], axis=1, inplace=True, errors='ignore')
 
     mem.drop(['Finance Info Record', 'Transaction Record', 'TotalAmount', 'RemainingBalance', 'DelinquentAmount',
     'OnHold', 'FirstPayment', 'FinalPayment', 'Ongoing', 'SubTotal', 'TAXONE', 'Tax', 'DelinquentSince',
     'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays', 'LastName',
-    'FirstName', 'NextPaymentAmount', 'CancellationDate'], axis=1, inplace=True, errors='ignore')
+    'FirstName', 'NextPaymentAmount', 'CancellationDate','Notes'], axis=1, inplace=True, errors='ignore')
 
 
     # clean contacts
@@ -59,9 +62,24 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     con['PrimaryPhone'].replace({'Primary Phone': 'Mobile', 'Home ': 'Home'}, inplace=True)
     procedures.fix_ranks(con, ranks='PrimaryNumber', programs='PrimaryPhone')
     procedures.fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
-    con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber'], axis=1, inplace=True)
+    con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber', 'nan'], axis=1, inplace=True)
     for i in ['Work', 'Mobile', 'Home']:
         procedures.clean_phones(con, i)
+
+    con['Related Contact 1'] = con['RelatedContactName1'] + ' (' + con['RelatedContactRole1'] + ') ' + \
+    ' -- ' + con['RelatedContactPhone1'] + ' -- '+con['RelatedContactEmail1']
+
+
+    con['Related Contact 2'] = con['RelatedContactName2'] + ' (' + con['RelatedContactRole2'] + ') ' + \
+    ' -- ' + con['RelatedContactPhone2'] + ' -- '+con['RelatedContactEmail2']
+    con.drop(['RelatedContactName1','RelatedContactRole1','RelatedContactPhone1','RelatedContactPhone1_NoSpace',
+    'RelatedContactEmail1','RelatedContactName2','RelatedContactRole2','RelatedContactPhone2',
+    'RelatedContactPhone2_NoSpace','RelatedContactEmail2'], axis=1, inplace=True)
+
+    con.rename(columns={'BecameLead': 'Date Added', 'PerfectScanID': 'Alternate ID (Scan)', 'CampaignName': 'Source'}, inplace=1)
+
+    con['Source'] = np.where((con['Source'].isnull()) & (con['ReferedBy'].notnull()), 'Referral', con['Source'])
+
 
     # clean up financials // sort down to most recent & reliable card, keep only that ContactRecord
 
@@ -102,6 +120,8 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     mem['Billing Company'].replace({'Billing Direct': 'autoCharge', 'In-House':"In House"}, inplace=True)
 
+    mem['Frequency'].replace({'Monthly': '30', 'Paid In Full': '0'}, inplace=True)
+
     # Need to fill null expire with 2099
 
     # Merge files
@@ -112,6 +132,9 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     for x in needs_merge:
         x.set_index('RecordName')
         complete = pd.merge(complete, x, on=key, how='left')
+
+
+
     complete.name = 'Complete_File'
 
     # decide payment method
