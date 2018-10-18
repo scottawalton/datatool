@@ -182,12 +182,12 @@ def tidy_split(df, column='Members', sep=', ', keep=False):
 
 
 
-def probably_useless(df, df2):
+def probably_useless(df, df2, index):
 
     # Takes two files with a unique identifier, prioritizes one and merges the data together where it can.
 
-        df.set_index('MBSystemID', inplace=True)
-        df2.set_index('MBSystemID', inplace=True)
+        df.set_index(index, inplace=True)
+        df2.set_index(index, inplace=True)
 
         intersect_MB = pd.DataFrame(columns=df.columns.values)
         intersect_RM = pd.DataFrame(columns=df.columns.values)
@@ -210,28 +210,3 @@ def probably_useless(df, df2):
             if i in priority.index.values:
                 print('what')
         df = priority.append(outer)
-
-def merge_parents(df, df2, first1='First Name', last1='Last Name', first2=None, last2=None):
-
-    if first2 == None:
-        first2 = first1
-    if last2 == None:
-        last2 = last1
-
-    for i in df['Mother'].str.upper().tolist():
-        if not(isinstance(i, float)):
-            for index, row in df3.iterrows():
-                if row['First Name'].upper() in i and row['Last Name'].upper() in i:
-                    parents = parents.append(row)
-
-    for i in df['Father'].str.upper().tolist():
-        if not(isinstance(i, float)):
-            for index, row in df3.iterrows():
-                if row['First Name'].upper() in i and row['Last Name'].upper() in i:
-                    parents = parents.append(row)
-
-    for i in df['Full Name'].str.upper().tolist():
-        if not(isinstance(i, float)):
-            for index, row in df3.iterrows():
-                if row['First Name'].upper() in i and row['Last Name'].upper() in i:
-                    adults = adults.append(row)

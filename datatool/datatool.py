@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
         # Load in file specified by filename
 
-        procedures.csv_from_excel()
+        df = procedures.load(args.filename, args.filepath)
 
         # Apply changes as specified by args
 
@@ -78,5 +78,5 @@ if __name__ == '__main__':
             df = software.rm.RMfix(df)
 
         # Output file
-        #df.to_csv('clean_' + args.filename + '.csv', index=False, quoting=1)
+        df.to_csv('clean_' + args.filename + '.csv', index=False, quoting=1)
         print('\a')
