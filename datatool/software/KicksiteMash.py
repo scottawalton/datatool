@@ -34,8 +34,8 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
 
     # Rename for merge
 
-    #con.rename(columns={'Inquiry Date': 'Date Added'}, inplace=True)
-    #ranks.rename(columns={'Person': 'Full Name'}, inplace=True)
+    con.rename(columns={'Inquiry Date': 'Date Added'}, inplace=True)
+    ranks.rename(columns={'Person': 'Full Name'}, inplace=True)
 
     # Drop columns we can't use
 
@@ -51,7 +51,7 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
 
     ## Prospects ##
 
-    contactTypes = {'trial': 'T', "archived": "FP"}
+    contactTypes = {'trial': 'T', "archived": "P"}
     prospects['Prospect Status'] = prospects['Prospect Status'].map(contactTypes)
     prospects.rename(columns={'Prospect Status': 'Contact Type', 'Prospect Source': 'Source', 'Phone': 'Mobile'}, inplace=True)
 
@@ -59,7 +59,7 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
 
     frozen.drop(['Frozen','Frozen on','Freeze Until'], axis=1, inplace=True)
     active = active.append(frozen, sort=False)
-    # append frozen to active -- they are treated as regular students
+    #append frozen to active -- they are treated as regular students
 
     ## Active ##
 
@@ -75,15 +75,33 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
     # All Sheets
     sheets = [active, prospects, inactive]
     for sheet in sheets:
-        sheet['Gender'].replace({'Female': 'F', 'Male':"M"}, inplace=True)
+
+        if 'Gender' in sheet.columns.values:
+            sheet['Gender'].replace({'Female': 'F', 'Male':"M"}, inplace=True)
+
         if 'Guardians' in sheet.columns.values:
-            sheet['Guardians'], sheet['Guardian 2'] = sheet['Guardians'].str.split(',', 1).str
+            vals = sheet['Guardians'].str.split(',', 1, expand=True)
+            vals.columns = ['Guardian 1', 'Guardian 2']
+            sheet['Guardian 1'], sheet['Guardian 2'] = vals['Guardian 1'], vals['Guardian 2']
+            sheet.drop(['Guardians'], axis=1, inplace=True)
+
+        if 'Phone Numbers' in sheet.columns.values:
             procedures.split_phones(sheet, 'Phone Numbers')
+            sheet.drop(['Phone Numbers'], axis=1, inplace=True)
+
+        if 'Emails' in sheet.columns.values:
             procedures.split_emails(sheet, 'Emails')
-            sheet.drop(['Emails', 'Phone Numbers'], axis=1, inplace=True)
-            phone_cols = ['Mobile', 'Mobile 2', 'Mobile 3', 'Home', 'SMS Phone']
-            for phone in phone_cols:
-                sheet[phone] = sheet[phone].replace(r'[^0-9]','', regex=True)
+            if 'Email' in sheet.columns.values:
+                sheet.drop(['Emails'], axis=1, inplace=True)
+
+        phone_cols = ['Mobile', 'Mobile 2', 'Mobile 3', 'Home', 'SMS Phone', 'Phone Number']
+        for phone in phone_cols:
+            if phone in sheet.columns.values:
+                procedures.clean_phones(sheet, phone)
+
+        if 'Current Ranks' in sheet.columns.values and 'Programs' in sheet.columns.values:
+            procedures.fix_ranks(sheet, ranks='Current Ranks', programs='Programs')
+
 
 
     ## Families ##
@@ -91,7 +109,7 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
     fam.drop(['Edit', 'Created'], inplace=True, axis=1)
     index = len(fam.index.values)
     for rowIndex, row in fam.iterrows():
-        if '\n' in row['Members']:
+        if not(isinstance(row['Members'], float)) and '\n' in row['Members']:
             members = row['Members'].split('\n')
             for member in members:
                 index += 1

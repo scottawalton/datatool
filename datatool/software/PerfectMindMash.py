@@ -62,19 +62,9 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
     con['PrimaryPhone'].replace({'Primary Phone': 'Mobile', 'Home ': 'Home'}, inplace=True)
     procedures.fix_ranks(con, ranks='PrimaryNumber', programs='PrimaryPhone')
     procedures.fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
-    con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber', 'nan'], axis=1, inplace=True)
+    con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber'], axis=1, inplace=True)
     for i in ['Work', 'Mobile', 'Home']:
         procedures.clean_phones(con, i)
-
-    con['Related Contact 1'] = con['RelatedContactName1'] + ' (' + con['RelatedContactRole1'] + ') ' + \
-    ' -- ' + con['RelatedContactPhone1'] + ' -- '+con['RelatedContactEmail1']
-
-
-    con['Related Contact 2'] = con['RelatedContactName2'] + ' (' + con['RelatedContactRole2'] + ') ' + \
-    ' -- ' + con['RelatedContactPhone2'] + ' -- '+con['RelatedContactEmail2']
-    con.drop(['RelatedContactName1','RelatedContactRole1','RelatedContactPhone1','RelatedContactPhone1_NoSpace',
-    'RelatedContactEmail1','RelatedContactName2','RelatedContactRole2','RelatedContactPhone2',
-    'RelatedContactPhone2_NoSpace','RelatedContactEmail2'], axis=1, inplace=True)
 
     con.rename(columns={'BecameLead': 'Date Added', 'PerfectScanID': 'Alternate ID (Scan)', 'CampaignName': 'Source'}, inplace=1)
 

@@ -122,7 +122,7 @@ def split_emails(df, emails):
 
     # Split Emails from one column to three
 
-    df['Email 1'] = df['Emails'].str.extract('(.*?@.*?\....),?',expand=True)
+    df['Email'] = df['Emails'].str.extract('(.*?@.*?\....),?',expand=True)
     df['Email 2'] = df['Emails'].str.extract('.*@.*\....,\s(.*@.*\....)',expand=True)
     df['Email 3'] = df['Emails'].str.extract('.*@.*\....,\s.*@.*\....,\s(.*@.*\....)',expand=True)
 

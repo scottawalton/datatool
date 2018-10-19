@@ -5,10 +5,12 @@ import numpy as np
 import argparse
 import re
 import software
+import merge
 import datetime
 import xlrd
 import csv
 import procedures
+
 
 # If called as executable
 
@@ -57,12 +59,12 @@ if __name__ == '__main__':
 
     elif args.type is None or args.type == 'RM':
 
-        # Add ability to parse filename + make it required
-
-
         # Load in file specified by filename
 
         df = procedures.load(args.filename, args.filepath)
+
+        df = df[df['Contact Type'].isnull()]
+        df.dropna(how='all', inplace=True, axis=1)
 
         # Apply changes as specified by args
 
