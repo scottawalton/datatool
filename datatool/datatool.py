@@ -1,3 +1,5 @@
+from PyQt5 import QtWidgets
+from gui.Controller import MyWorkingCode
 import pandas as pd
 import glob
 import sys, os
@@ -29,28 +31,35 @@ if __name__ == '__main__':
     parser.add_argument('-W', '--whitespace',help="Preserve whitespace")
     parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM','KS', 'PM', 'MB', 'ASF', 'ZP', 'MS'],help='Type of data file, e.g. RM, PM')
     parser.add_argument('-e', '--extract', action='store_false', help='Convert from Excel to CSV')
+    parser.add_argument('-g', '--gui', action='store_false', help='Use the GUI')
     parser.add_argument('filename', help='Csv file to clean')
     args = parser.parse_args()
 
     # Handle multiple file software specific exports
 
-    if args.type == 'ZP':
-        software.zp.ZPfix()
+    if args.gui == True:
+        app = QtWidgets.QApplication(sys.argv)
+        window = MyWorkingCode()
+        window.show()
+        sys.exit(app.exec_())
+
+    elif args.type == 'ZP':
+        software.ZenPlannerMash.ZPfix()
 
     elif args.type == 'PM':
-        software.pm.PMfix()
+        software.PerfectMindMash.PMfix()
 
     elif args.type == 'MB':
-        software.mb.MBfix()
+        software.MindBodyMash.MBfix()
 
     elif args.type == 'KS':
-        software.ks.KSfix()
+        software.KicksiteMash.KSfix()
 
     elif args.type == 'ASF':
-        software.asf.ASFfix()
+        software.ASFmash.ASFfix()
 
     elif args.type == 'MS':
-        software.ms.MSfix()
+        software.MemberSolutionsMash.MSfix()
 
     elif args.extract == False:
         procedures.csv_from_excel(path_to_files=os.getcwd())
@@ -77,7 +86,7 @@ if __name__ == '__main__':
         # Handle RainMaker files
 
         if args.type == 'RM':
-            df = software.rm.RMfix(df)
+            df = software.RainMakerFix.RMfix(df)
 
         # Output file
         df.to_csv('clean_' + args.filename + '.csv', index=False, quoting=1)

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DataTool</class>
+ <widget class="QMainWindow" name="DataTool">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>928</width>
+    <height>778</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>DataTool</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QTableView" name="tableView">
+      <property name="sortingEnabled">
+       <bool>false</bool>
+      </property>
+      <attribute name="verticalHeaderDefaultSectionSize">
+       <number>30</number>
+      </attribute>
+      <attribute name="verticalHeaderMinimumSectionSize">
+       <number>30</number>
+      </attribute>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="textEdit">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="whatsThis">
+       <string>Enter Python code here.</string>
+      </property>
+      <property name="placeholderText">
+       <string>Enter Python code here.</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="runButton">
+      <property name="whatsThis">
+       <string/>
+      </property>
+      <property name="text">
+       <string>Run</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>928</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionLoad"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuOperations">
+    <property name="title">
+     <string>Operations</string>
+    </property>
+    <addaction name="actionClear_Whitespace"/>
+    <addaction name="actionRemove_Non_Numberic"/>
+    <addaction name="actionSplit_Phones"/>
+    <addaction name="actionSplit_Emails"/>
+    <addaction name="actionDisperse_Ranks_By_Program"/>
+    <addaction name="actionNew_Rows_On_Separator"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Software</string>
+    </property>
+    <addaction name="actionRainmaker"/>
+    <addaction name="actionMindBody"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuOperations"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionLoad">
+   <property name="text">
+    <string>Load</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionClear_Whitespace">
+   <property name="text">
+    <string>Remove Whitespace</string>
+   </property>
+   <property name="toolTip">
+    <string>Removes leading and trailing whitespace, as well as all line-breaks</string>
+   </property>
+  </action>
+  <action name="actionRemove_Non_Numberic">
+   <property name="text">
+    <string>Remove Non-Numeric</string>
+   </property>
+   <property name="toolTip">
+    <string>Removes everything but numbers from a column.</string>
+   </property>
+  </action>
+  <action name="actionSplit_Phones">
+   <property name="text">
+    <string>Split Phones</string>
+   </property>
+   <property name="toolTip">
+    <string>Splits a column of phones based on their suffix. E.g. (M), (C), (H)...</string>
+   </property>
+  </action>
+  <action name="actionSplit_Emails">
+   <property name="text">
+    <string>Split Emails</string>
+   </property>
+   <property name="toolTip">
+    <string>Splits a column of comma separated emails into a max of 3 Email columns</string>
+   </property>
+  </action>
+  <action name="actionDisperse_Ranks_By_Program">
+   <property name="text">
+    <string>Ranks By Program</string>
+   </property>
+   <property name="toolTip">
+    <string>Creates new columns based on unique entries in a column (programs) and assigns values (ranks) respectively.</string>
+   </property>
+  </action>
+  <action name="actionNew_Rows_On_Separator">
+   <property name="text">
+    <string>New Rows On Separator</string>
+   </property>
+   <property name="toolTip">
+    <string>Splits a column's values up over multiple identical rows.</string>
+   </property>
+  </action>
+  <action name="actionRainmaker">
+   <property name="text">
+    <string>Rainmaker</string>
+   </property>
+   <property name="toolTip">
+    <string>Handles entire process for Rainmaker. Please check, double-check, re-check.</string>
+   </property>
+  </action>
+  <action name="actionMindBody">
+   <property name="text">
+    <string>MindBody</string>
+   </property>
+   <property name="toolTip">
+    <string>Handles entire process for MindBody. Please check, double-check, re-check.</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

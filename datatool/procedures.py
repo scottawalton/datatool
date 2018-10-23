@@ -103,13 +103,13 @@ def split_phones(df, phones):
 
     # Split Phones from one column to four
 
-    df['Mobile'] = df['Phone Numbers'].str.extract('(...-...-....)\(M\)',expand=True)
-    df['Mobile 2'] = df['Phone Numbers'].str.extract('...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
-    df['Mobile 3'] = df['Phone Numbers'].str.extract('...-...-....\(M\).*?...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
-    df['Home'] = df['Phone Numbers'].str.extract('(...-...-....)\(H\)',expand=True)
-    df['Mobile'] = df['Phone Numbers'].str.extract('(...-...-....)\(C\)',expand=True)
-    df['Mobile 2'] = df['Phone Numbers'].str.extract('...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
-    df['Mobile 3'] = df['Phone Numbers'].str.extract('...-...-....\(C\).*?...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
+    df['Mobile'] = df['Phone Numbers'].str.extract(r'(...-...-....)\(M\)',expand=True)
+    df['Mobile 2'] = df['Phone Numbers'].str.extract(r'...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
+    df['Mobile 3'] = df['Phone Numbers'].str.extract(r'...-...-....\(M\).*?...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
+    df['Home'] = df['Phone Numbers'].str.extract(r'(...-...-....)\(H\)',expand=True)
+    df['Mobile'] = df['Phone Numbers'].str.extract(r'(...-...-....)\(C\)',expand=True)
+    df['Mobile 2'] = df['Phone Numbers'].str.extract(r'...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
+    df['Mobile 3'] = df['Phone Numbers'].str.extract(r'...-...-....\(C\).*?...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
     df = df.drop('Phone Numbers', 1)
 
 # Remove non numberic characters from phone numbers
@@ -122,9 +122,9 @@ def split_emails(df, emails):
 
     # Split Emails from one column to three
 
-    df['Email'] = df['Emails'].str.extract('(.*?@.*?\....),?',expand=True)
-    df['Email 2'] = df['Emails'].str.extract('.*@.*\....,\s(.*@.*\....)',expand=True)
-    df['Email 3'] = df['Emails'].str.extract('.*@.*\....,\s.*@.*\....,\s(.*@.*\....)',expand=True)
+    df['Email'] = df['Emails'].str.extract(r'(.*?@.*?\....),?',expand=True)
+    df['Email 2'] = df['Emails'].str.extract(r'.*@.*\....,\s(.*@.*\....)',expand=True)
+    df['Email 3'] = df['Emails'].str.extract(r'.*@.*\....,\s.*@.*\....,\s(.*@.*\....)',expand=True)
 
 def fix_zp_dates(df, col=None):
     if col == None:
