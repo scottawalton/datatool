@@ -36,15 +36,15 @@ def csv_from_excel(path_to_files=os.getcwd()):
             try:
                 os.mkdir(filename)
             except:
-                print('blahhhh')
+                print('Could not create directory to output to.')
                 pass
             for i in xls_file.sheet_names:
                 file = pd.read_excel(xls_file, i, index_col=None, dtype=object)
                 file.to_csv(filename + '/' + i + '.csv', quoting=csv.QUOTE_ALL, index = False)
 
         else:
-            print(len(xls_file.sheet_names))
-            xls_file.to_csv('clean/' + filename + '.csv',quoting=csv.QUOTE_ALL, index = False)
+            file = xls_file.parse()
+            file.to_csv( filename + '.csv',quoting=csv.QUOTE_ALL, index = False)
 
 
 def fix_ranks(df, ranks='Current Ranks', programs='Programs'):

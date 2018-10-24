@@ -5,16 +5,24 @@ import sys
 import pandas as pd
 from gui import Model
 import numpy as np
+import procedures
 
 # This is the controller
 
 class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
-    def __init__(self):
+    def __init__(self, filename=None, path=os.getcwd()):
         super(QtWidgets.QMainWindow, self).__init__()
 
         self.setupUi(self)
-        self.panda = Model.PandasTable(pd.DataFrame())
+
+        # If a file was specified, load it up. If not, load empty.
+        if filename != None:
+            data = procedures.load(filename, path)
+            self.panda = Model.PandasTable(data)
+        else:
+            self.panda = Model.PandasTable(pd.DataFrame())
+
         self.tableView.setModel(self.panda)
 
         # File Menu Actions

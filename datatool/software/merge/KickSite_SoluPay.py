@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import procedures
+import numpy as np
 
 ## This is the best possible method to get as many accurate matches as possible with the data provided.
 ## takes CheckLast as a parameter to decide whether or not to check for matches based on lastname alone
@@ -115,8 +116,6 @@ def merge(kicksiteFile, financials, checkLast=False):
             match, count = check_Mem(rowDF, row, count, match, checkLast)
 
         return (match, count)
-
-
 
     for indexDF, rowDF in df.iterrows():
         for index, row in fin.iterrows():

@@ -75,7 +75,7 @@ def RMfix(df):
 
     for index, x in df['Current_Program_Expires'].iteritems():
 
-        match = re.match('(.*/\d?\d)/(\d)(\d)([\s|$])', str(x))
+        match = re.match(r'(.*/\d?\d)/(\d)(\d)([\s|$])', str(x))
 
         if match is not None:
             if int(match.group(2)) >= 5 or x == '1/1/00 0:00':
@@ -100,4 +100,6 @@ def RMfix(df):
     df['Billing_Company'] = np.where((df['Payment_Method'] == 'In House') & (df['Billing_Company'].isnull()), 'In House', df['Billing_Company'])
     df['Billing_Company'] = np.where((df['Payment_Method'] == 'PIF') & (df['Billing_Company'].isnull()), 'PIF', df['Billing_Company'])
 
-    return df
+    df.dropna(how='all', inplace=True, axis=1)
+
+    df.to_csv('clean_' + 'RM' + '.csv', index=False, quoting=1)

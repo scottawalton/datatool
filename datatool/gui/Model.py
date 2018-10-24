@@ -25,7 +25,10 @@ class PandasTable(QtCore.QAbstractTableModel):
             row = index.row()
             column = index.column()
             value = self.df.values[row, column] 
-            return str(value)
+            if pd.isnull(value):
+                return ''
+            else:
+                return str(value)
     
     def flags(self, index):
         return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable

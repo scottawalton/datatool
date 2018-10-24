@@ -1,16 +1,9 @@
 from PyQt5 import QtWidgets
 from gui.Controller import MyWorkingCode
 import pandas as pd
-import glob
 import sys, os
-import numpy as np
 import argparse
-import re
 import software
-import merge
-import datetime
-import xlrd
-import csv
 import procedures
 
 
@@ -21,27 +14,15 @@ if __name__ == '__main__':
     # Handle arguments
 
     parser = argparse.ArgumentParser(description="Cleans up Spark's csv files")
-    parser.add_argument('-r', '--ranks', type=str, default='Current Ranks', metavar='', help='Name of Rank column')
-    parser.add_argument('-E', '--emails', type=str, default='Emails', metavar='', help='Name of Emails column')
-    parser.add_argument('-P', '--phones', type=str, default='Phone Numbers', metavar='', help='Name of Phone Numbers column')
-    parser.add_argument('-M', '--members_col', type=str, default='Members', metavar='', help='Name of Members column')
-    parser.add_argument('-p', '--programs', type=str, default='Programs', metavar='', help='Name of Program column')
     parser.add_argument('-f', '--filepath', default=os.getcwd(), type=str, metavar='', help='Path to file')
-    parser.add_argument('-R', '--noranks', action='store_true',help="Preserve ranks")
-    parser.add_argument('-W', '--whitespace',help="Preserve whitespace")
     parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM','KS', 'PM', 'MB', 'ASF', 'ZP', 'MS'],help='Type of data file, e.g. RM, PM')
-    parser.add_argument('-e', '--extract', action='store_false', help='Convert from Excel to CSV')
-    parser.add_argument('-g', '--gui', action='store_false', help='Use the GUI')
-    parser.add_argument('filename', help='Csv file to clean')
+    parser.add_argument('-e', '--extract', action='store_true', help='Convert from Excel to CSV')
+    parser.add_argument('-g', '--gui', action='store_false', help='Disable the GUI')
+    parser.add_argument('filename', help='Csv file to clean', nargs='?', default=None)
     args = parser.parse_args()
 
-    # Handle multiple file software specific exports
-
-    if args.gui == True:
-        app = QtWidgets.QApplication(sys.argv)
-        window = MyWorkingCode()
-        window.show()
-        sys.exit(app.exec_())
+    if args.extract == True:
+        procedures.csv_from_excel(args.filepath)
 
     elif args.type == 'ZP':
         software.ZenPlannerMash.ZPfix()
@@ -61,33 +42,23 @@ if __name__ == '__main__':
     elif args.type == 'MS':
         software.MemberSolutionsMash.MSfix()
 
-    elif args.extract == False:
-        procedures.csv_from_excel(path_to_files=os.getcwd())
-
-    # Handle single file exports and Rainmaker files
-
-    elif args.type is None or args.type == 'RM':
+    elif args.type == 'RM':
 
         # Load in file specified by filename
+        if args.filename == None:
+            print('You need to specify the filename.')
+        else:
+            df = procedures.load(args.filename, args.filepath)
+            software.RainMakerFix.RMfix(df)
 
-        df = procedures.load(args.filename, args.filepath)
-
-        df = df[df['Contact Type'].isnull()]
-        df.dropna(how='all', inplace=True, axis=1)
-
-        # Apply changes as specified by args
-
-        if args.noranks:
-            procedures.fix_ranks(df, args.ranks, args.programs)
-
-        if args.whitespace:
-            procedures.strip_whitespace(df)
-
-        # Handle RainMaker files
-
-        if args.type == 'RM':
-            df = software.RainMakerFix.RMfix(df)
-
-        # Output file
-        df.to_csv('clean_' + args.filename + '.csv', index=False, quoting=1)
-        print('\a')
+    elif args.gui == True and args.filename != None:
+        app = QtWidgets.QApplication(sys.argv)
+        window = MyWorkingCode(args.filename, path=args.filepath)
+        window.show()
+        sys.exit(app.exec_())
+    
+    elif args.gui == True and args.filename == None:
+        app = QtWidgets.QApplication(sys.argv)
+        window = MyWorkingCode()
+        window.show()
+        sys.exit(app.exec_())
