@@ -112,7 +112,9 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     mem['Frequency'].replace({'Monthly': '30', 'Paid In Full': '0'}, inplace=True)
 
-    # Need to fill null expire with 2099
+    mem['Billing Company'] = np.where((mem['Transaction Status'] == 'Completed') & (mem['MembershipStatus'] == 'Active'), 'PIF', mem['Billing Company'])
+
+    mem['Membership Expiry'] = np.where(mem['Membership Expiry'].isnull(), '12-31-2099', mem['Membership Expiry'])
 
     # Merge files
 
@@ -129,8 +131,9 @@ def PMfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     # decide payment method
     complete['Payment Method'] = np.where(complete['Billing Company'] =='In House','In House',
-                                        np.where(complete['AccountNumber'].notnull(),'EFT',
-                                                np.where(complete['CreditCardNumber'].notnull(),'CC', '')))
+                                        np.where(complete['Billing Company'] == 'PIF','PIF',
+                                            np.where(complete['AccountNumber'].notnull(),'EFT',
+                                                    np.where(complete['CreditCardNumber'].notnull(),'CC', ''))))
 
 
     try:
