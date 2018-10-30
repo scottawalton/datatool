@@ -15,18 +15,18 @@ class PandasTable(QtCore.QAbstractTableModel):
         self.df = data
 
     def rowCount(self, parent):
-        return len(self.df.values)
+        return len(self.df)
 
     def columnCount(self, parent):
-        return len(self.df.columns.values)
+        return len(self.df.columns)
     
     def data(self, index, role):
         if role == QtCore.Qt.DisplayRole:
             row = index.row()
             column = index.column()
-            value = self.df.values[row, column] 
+            value = self.df.iat[row, column] 
             if pd.isnull(value):
-                return ''
+                return str('')
             else:
                 return str(value)
     
@@ -127,3 +127,16 @@ class PandasTable(QtCore.QAbstractTableModel):
             msg.setText("No column selected.")
             msg.exec()
 
+    def correctDateFormat(self, selectionModel):
+        
+        cols = self.translateSelection(selectionModel)
+
+        # If columns are selected, do the operation on each of them, 
+        if cols != None:
+            for col in cols:
+                procedures.fix_zp_dates(self.df, col)
+        # otherwise: let the user know they need to select a column
+        else:
+            msg = QtWidgets.QMessageBox()
+            msg.setText("No column selected.")
+            msg.exec()

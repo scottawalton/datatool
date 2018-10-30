@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/vesi/documents/python/projects/dataproject/gui/View.ui'
+# Form implementation generated from reading ui file '/home/vesi/documents/bin/datatool/datatool/gui/View.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.3
 #
@@ -70,11 +70,14 @@ class Ui_DataTool(object):
         self.actionRainmaker.setObjectName("actionRainmaker")
         self.actionMindBody = QtWidgets.QAction(DataTool)
         self.actionMindBody.setObjectName("actionMindBody")
+        self.actionCorrect_Date_Format = QtWidgets.QAction(DataTool)
+        self.actionCorrect_Date_Format.setObjectName("actionCorrect_Date_Format")
         self.menuFile.addAction(self.actionLoad)
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionExit)
         self.menuOperations.addAction(self.actionClear_Whitespace)
         self.menuOperations.addAction(self.actionRemove_Non_Numberic)
+        self.menuOperations.addAction(self.actionCorrect_Date_Format)
         self.menuOperations.addAction(self.actionSplit_Phones)
         self.menuOperations.addAction(self.actionSplit_Emails)
         self.menuOperations.addAction(self.actionDisperse_Ranks_By_Program)
@@ -116,6 +119,7 @@ class Ui_DataTool(object):
         self.actionRainmaker.setToolTip(_translate("DataTool", "Handles entire process for Rainmaker. Please check, double-check, re-check."))
         self.actionMindBody.setText(_translate("DataTool", "MindBody"))
         self.actionMindBody.setToolTip(_translate("DataTool", "Handles entire process for MindBody. Please check, double-check, re-check."))
+        self.actionCorrect_Date_Format.setText(_translate("DataTool", "Correct Date Format"))
 
 
 if __name__ == "__main__":

@@ -97,6 +97,7 @@ def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
     # Get rid of 'nan'
 
     df[df == 'nan'] = np.nan
+    return df
 
 
 def split_phones(df, phones):
@@ -132,10 +133,12 @@ def fix_zp_dates(df, col=None):
         for x in cols:
             df[x] = pd.to_datetime(df[x])
             df[x].dt.strftime('%m-%d-%Y').astype(str)
+        return df
     else:
         x = col
         df[x] = pd.to_datetime(df[x])
         df[x].dt.strftime('%m-%d-%Y').astype(str)
+        return df
 
 def strip_whitespace(df, column=None):
 
