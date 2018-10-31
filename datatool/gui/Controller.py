@@ -31,6 +31,9 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.actionSave.triggered.connect(self.saveData)
 
 
+        # Edit Menu Actions
+        self.actionDelete.triggered.connect(self.deleteData)
+
         # Operations Menu Actions
         self.actionClear_Whitespace.triggered.connect(self.clearWhitespace)
         self.actionRemove_Non_Numberic.triggered.connect(self.removeNonNumeric)
@@ -65,6 +68,18 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         QtCore.QCoreApplication.exit()
     #endregion
 
+    #region Edit Menu
+
+    def deleteData(self):
+
+        # A selection model to get the current selection
+        selectionModel = self.tableView.selectionModel()
+
+        # Pass it to the panda model to deal with
+        self.panda.deleteData(selectionModel)
+
+    #endregion
+
     #region Operations Menu
 
     def clearWhitespace(self):
@@ -93,34 +108,11 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
     def ranksByProgram(self):
 
-        dialog = QtWidgets.QDialog()
-        layout = QtWidgets.QGridLayout()
-        rankSelect = QtWidgets.QComboBox()
-        rankSelect.addItems(self.panda.df.columns.values)
-        programSelect = QtWidgets.QComboBox()
-        programSelect.addItems(self.panda.df.columns.values)
-        layout.addWidget(programSelect, 1, 1)
-        layout.addWidget(QtWidgets.QLabel('Program Column:'), 1, 0)
-        layout.addWidget(rankSelect, 0, 1)
-        layout.addWidget(QtWidgets.QLabel('Rank Column:'), 0, 0)
-        confirm = QtWidgets.QPushButton('Confirm')
-        layout.addWidget(confirm, 3, 1)
-        def confirmClicked():
-            rank = str(rankSelect.currentText())
-            program  = str(programSelect.currentText())
-            self.panda.df = procedures.fix_ranks(self.panda.df, ranks=rank, programs=program)
-            dialog.reject()
-            self.panda.layoutChanged.emit()
-        confirm.clicked.connect(confirmClicked)
-        cancel = QtWidgets.QPushButton('Cancel')
-        def cancelClicked():
-            dialog.reject()
-        cancel.clicked.connect(cancelClicked)
-        layout.addWidget(cancel, 3, 0)
-        dialog.setLayout(layout)
-        dialog.setWindowTitle('Ranks by Program')
-        dialog.setWindowModality(QtCore.Qt.ApplicationModal)
-        dialog.exec()
+        # Prompts user and gets a set of values
+        ranks, programs = Model.RanksByProgramsDialogBox.getResults(self.panda, self)
+
+        # Passes values to PandaModel to be validated and acted upon
+        self.panda.ranksByPrograms(ranks, programs)
 
     #endregion
 

@@ -76,7 +76,7 @@
    </widget>
    <widget class="QMenu" name="menuOperations">
     <property name="title">
-     <string>Operations</string>
+     <string>Operation</string>
     </property>
     <addaction name="actionClear_Whitespace"/>
     <addaction name="actionRemove_Non_Numberic"/>
@@ -93,7 +93,17 @@
     <addaction name="actionRainmaker"/>
     <addaction name="actionMindBody"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionAdd_Row"/>
+    <addaction name="actionAdd_Column"/>
+    <addaction name="actionDelete"/>
+    <addaction name="actionDuplicate"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuOperations"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -179,6 +189,32 @@
   <action name="actionCorrect_Date_Format">
    <property name="text">
     <string>Correct Date Format</string>
+   </property>
+  </action>
+  <action name="actionDelete">
+   <property name="text">
+    <string>Delete</string>
+   </property>
+   <property name="toolTip">
+    <string>Deletes selected Row/Column</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionAdd_Column">
+   <property name="text">
+    <string>Add Column</string>
+   </property>
+  </action>
+  <action name="actionAdd_Row">
+   <property name="text">
+    <string>Add Column</string>
+   </property>
+  </action>
+  <action name="actionDuplicate">
+   <property name="text">
+    <string>Duplicate</string>
    </property>
   </action>
  </widget>

@@ -85,11 +85,36 @@ class PandasTable(QtCore.QAbstractTableModel):
             command = command.replace('df', 'self.df')
             exec(command)
     
+
+    def deleteData(self, selectionModel):
+
+        cols, rows = self.translateSelection(selectionModel)       
+
+        # If columns are selected, do the operation on each of them, 
+        if cols != None:
+
+            # python pandas method to drop the columns
+            self.df = self.df.drop(cols, axis=1)
+            self.layoutChanged.emit()
+
+        # otherwise: check if rows are selected
+        elif rows != None:
+
+            self.df = self.df.drop(rows)
+            self.df = self.df.reset_index(drop=True)
+            self.layoutChanged.emit()
+        
+        else:
+            msg = QtWidgets.QMessageBox()
+            msg.setText("No columns or rows selected.")
+            msg.exec()
+
     # Translates a selection model into column names
     # Eventually want to implement foreach functionality into this and refactor
     def translateSelection(self, selectionModel):
 
         selectionColumns = selectionModel.selectedColumns()
+        selectionRows = selectionModel.selectedRows()
 
         if selectionColumns != []:
             # loops through all selected columns
@@ -98,9 +123,17 @@ class PandasTable(QtCore.QAbstractTableModel):
                 # gets the name of the column and appends it to the list
                 colNames.append(self.df.columns.values[i.column()])
             
-            return colNames
+            return colNames, None
+        if selectionRows != []:
+            # loops through all selected rows
+            rowIndexes = []
+            for i in selectionRows:
+                # append it to the list
+                rowIndexes.append(i.row())
+            
+            return None, rowIndexes
         else:
-            return None
+            return None, None
 
     def clearWhitespace(self, selectionModel):
 
@@ -140,3 +173,51 @@ class PandasTable(QtCore.QAbstractTableModel):
             msg = QtWidgets.QMessageBox()
             msg.setText("No column selected.")
             msg.exec()
+    
+    def ranksByPrograms(self, ranks, programs):
+
+        if ranks == '' or programs == '':
+            msg = QtWidgets.QMessageBox()
+            msg.setText("Both selecions need to be valid.")
+            msg.exec()
+        
+        elif ranks == None or programs == None:
+            pass
+
+        else:
+            procedures.fix_ranks(self.df, ranks, programs)
+            self.layoutChanged.emit()
+
+
+class RanksByProgramsDialogBox(QtWidgets.QDialog):
+    
+    def __init__(self, pandaTable, parent):
+        QtWidgets.QDialog.__init__(self)
+
+        self.df = pandaTable
+
+        self.layout = QtWidgets.QGridLayout(self)
+        self.rankSelect = QtWidgets.QComboBox()
+        self.rankSelect.addItems(self.df.columns.values)
+        self.programSelect = QtWidgets.QComboBox()
+        self.programSelect.addItems(self.df.columns.values)
+        self.layout.addWidget(self.programSelect, 1, 1)
+        self.layout.addWidget(QtWidgets.QLabel('Program Column:'), 1, 0)
+        self.layout.addWidget(self.rankSelect, 0, 1)
+        self.layout.addWidget(QtWidgets.QLabel('Rank Column:'), 0, 0)
+        self.confirm = QtWidgets.QPushButton('Confirm')
+        self.layout.addWidget(self.confirm, 3, 1)
+        self.confirm.clicked.connect(self.accept)
+        self.cancel = QtWidgets.QPushButton('Cancel')
+        self.cancel.clicked.connect(self.reject)
+        self.layout.addWidget(self.cancel, 3, 0)
+        self.setWindowTitle('Ranks by Program')
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+
+    def getResults(self, parent=None):
+        dialog = RanksByProgramsDialogBox(self.df, parent)
+        result = dialog.exec_()
+        if result == QtWidgets.QDialog.Accepted:
+            return dialog.rankSelect.currentText(), dialog.programSelect.currentText()
+        else:
+            return None, None
