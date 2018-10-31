@@ -36,6 +36,7 @@ def merge(kicksiteFile, financials, checkLast=False):
 
                 count += 1
                 rowDF['Match'] = row['FirstName'].upper() + row['LastName'].upper()
+                rowDF['MatchType'] = 'last'
                 match = match.append(rowDF)
                 print(str(count) + '-- LASTNAME')
                 return (match, count)
@@ -142,6 +143,11 @@ def merge(kicksiteFile, financials, checkLast=False):
 
     fin['Match'] = fin['FirstName'].str.upper() + fin['LastName'].str.upper()
 
+    if checkLast == True:
+        lastNameCounts = fin['LastName'].value_counts()
+        IneligibleLastNames = lastNameCounts[lastNameCounts > 1]
+
+        match = match[~((match['MatchType'] == 'last') & (match['Last Name'].str.upper().isin(IneligibleLastNames.index.values)))]
 
     match = match.merge(fin, on='Match')
 

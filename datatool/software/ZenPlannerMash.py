@@ -2,6 +2,7 @@ import pandas as pd
 import glob
 import sys, os
 import numpy as np
+import procedures
 
 
 def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
@@ -131,12 +132,14 @@ def ZPfix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
 
     cols = ['Birth Date', 'Mbr. Begin Date', 'Date Added', 'Last Att. Date', 'Mbr. End Date', 'First Bill Due', 'Next Payment Due Date']
     for x in cols:
-        complete[x] = pd.to_datetime(complete[x])
-        complete[x].dt.strftime('%m-%d-%Y').astype(str)
+        if x in complete.columns.values:
+            complete[x] = pd.to_datetime(complete[x])
+            complete[x].dt.strftime('%m-%d-%Y').astype(str)
 
     phones = ['Home Phone','Cell Phone', 'Phone']
     for phone in phones:
-        complete[phone] = complete[phone].replace(r'[^0-9]','', regex=True)
+        if phone in complete.columns.values:
+            complete[phone] = complete[phone].replace(r'[^0-9]','', regex=True)
 
     replacements = {'Prospect': 'P','Alumni': 'F',
                     'Student': 'S', np.nan: 'P'}

@@ -183,6 +183,14 @@ def tidy_split(df, column='Members', sep=', ', keep=False):
     return df
 
 
+# Used when data contains double quotes -- we just drop the rows
+
+def drop_quote_rows(df):
+    for i in df.columns.values:
+        if df[i].dtype != 'datetime64[ns]' and df[i].dtype != 'float64':
+            df = df[~df[i].str.contains('"', na=False)]
+    print('Dropped all rows with quotes')
+    return df
 
 
 def probably_useless(df, df2, index):
