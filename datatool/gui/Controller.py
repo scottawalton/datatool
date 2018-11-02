@@ -229,7 +229,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
     def ranksByProgram(self):
 
         # Prompts user and gets a set of values
-        ranks, programs = Model.RanksByProgramsDialogBox.getResults(self.panda, self)
+        ranks, programs = Model.RanksByProgramsDialogBox.getResults(self.getCurrentPanda(), self)
 
         # Passes values to PandaModel to be validated and acted upon
         self.getCurrentPanda().ranksByPrograms(ranks, programs)

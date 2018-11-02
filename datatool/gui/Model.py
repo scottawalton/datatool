@@ -83,6 +83,7 @@ class PandasTable(QtCore.QAbstractTableModel):
 
     # Translates a selection model into column names
     # Eventually want to implement foreach functionality into this and refactor
+    # Returns a tuple of column names and row indexes
     def translateSelection(self, selectionModel):
 
         selectionColumns = selectionModel.selectedColumns()
@@ -109,10 +110,10 @@ class PandasTable(QtCore.QAbstractTableModel):
 
     def clearWhitespace(self, selectionModel):
 
-        cols = self.translateSelection(selectionModel)       
+        selection = self.translateSelection(selectionModel)       
         # If columns are selected, do the operation on each of them, 
-        if cols != None:
-            for col in cols[0]:
+        if selection[0] != None:
+            for col in selection[0]:
                 self.df = procedures.strip_whitespace(self.df, col)
         # otherwise: do it on the entire dataframe
         else:
@@ -122,11 +123,11 @@ class PandasTable(QtCore.QAbstractTableModel):
 
     def removeNonNumeric(self, selectionModel):
 
-        cols = self.translateSelection(selectionModel)
+        selection = self.translateSelection(selectionModel)
 
         # If columns are selected, do the operation on each of them, 
-        if cols != None:
-            for col in cols[0]:
+        if selection[0] != None:
+            for col in selection[0]:
                 procedures.clean_phones(self.df, col)
         # otherwise: let the user know they need to select a column
         else:
@@ -138,11 +139,11 @@ class PandasTable(QtCore.QAbstractTableModel):
 
     def correctDateFormat(self, selectionModel):
         
-        cols = self.translateSelection(selectionModel)
+        selection = self.translateSelection(selectionModel)
 
         # If columns are selected, do the operation on each of them, 
-        if cols != None:
-            for col in cols[0]:
+        if selection[0] != None:
+            for col in selection[0]:
                 procedures.fix_zp_dates(self.df, col)
         # otherwise: let the user know they need to select a column
         else:
