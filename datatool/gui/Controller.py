@@ -176,6 +176,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         verticalLayout.setSpacing(10)
         verticalLayout.setObjectName("verticalLayout")
         tableView = QtWidgets.QTableView(tab)
+        tableView.setHorizontalHeader(Model.PandaTableHorizontalHeader())
         tableView.setSortingEnabled(False)
         tableView.setObjectName("tableView")
         tableView.verticalHeader().setDefaultSectionSize(30)

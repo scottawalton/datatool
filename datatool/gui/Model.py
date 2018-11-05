@@ -302,6 +302,79 @@ class PandasTable(QtCore.QAbstractTableModel):
         selectionModel.clear()
     #endregion
 
+class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
+    """
+    A custom implementation of a QHeaderView that allows us to doubleclick and edit
+    the column names. This is passed to our TableView upon tab creation.
+
+        :todo:
+            Allow dragging and dropping columns when Alt modifier is pressed
+    """
+
+    def __init__(self, orientation=QtCore.Qt.Horizontal, parent=None):
+        QtWidgets.QHeaderView.__init__(self, orientation, parent)
+        self.setSectionsClickable(True)
+        self.line = QtWidgets.QLineEdit(parent=self.viewport())  #Create
+        self.line.setAlignment(QtCore.Qt.AlignTop)
+        self.line.setHidden(True) # Hide it till its needed
+        self.sectionedit = 0
+        self.sectionDoubleClicked.connect(self.editHeader)
+        self.line.editingFinished.connect(self.doneEditing)
+        self.sectionPressed.connect(self.handlePressed)
+        self.sectionMoved.connect(self.handleMoved)
+    
+    def handleMoved(self, logical, visualOld, visualNew):
+        """
+        Changes order of columns in underlying model to match the visual appearance
+        """   
+        self.setSectionsMovable(False)
+        cols  = list(self.model().df.columns.values)
+
+        cols[logical], cols[visualNew] = cols[visualNew], cols[logical]
+
+        self.model().df = self.model().df[cols]
+        self.model().layoutChanged.emit()
+
+    def handlePressed(self):
+        """
+        Allows us to move the column if the Alt modifier is pressed.
+        """
+        modifier = QtGui.QGuiApplication.keyboardModifiers()
+        if modifier == QtCore.Qt.AltModifier:
+            self.setSectionsMovable(True)
+ 
+    def doneEditing(self):
+        """
+        Called when the user presses Enter in the QLineEdit
+        """
+
+        self.line.setHidden(True)
+        oldName = self.model().df.columns.values[self.sectionedit]
+        newName = str(self.line.text())
+        self.model().df.rename(columns={oldName: newName}, inplace=True)
+        self.setCurrentIndex(QtCore.QModelIndex())
+ 
+    def editHeader(self,section):
+        """
+        Makes the existing QLineEdit visible and changes the geometry to fit the header cell.
+        Called when the user double clicks a header cell.
+
+            :param section: 
+                The index of the header cell
+        """
+
+        # Sets up the geometry for the line edit
+        edit_geometry = self.line.geometry()
+        edit_geometry.setWidth(self.sectionSize(section))
+        edit_geometry.moveLeft(self.sectionViewportPosition(section))
+        self.line.setGeometry(edit_geometry)
+ 
+        self.line.setText(self.model().df.columns.values[section])
+        self.line.setHidden(False)
+        self.line.setFocus()
+        self.line.selectAll()
+        self.sectionedit = section
+
 class RanksByProgramsDialogBox(QtWidgets.QDialog):
     """
     A dialog box to get the information required by the ranksbyPrograms function.
