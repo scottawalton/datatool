@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/vesiv/datatool.svg?branch=master)](https://travis-ci.com/vesiv/datatool)
+
 datatool is a tool to make cleaning up messy data easier and faster.
 
 Currently has full support for exports from the following sofwares:
