@@ -36,12 +36,6 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
         if 'ClientIndexes' in i:
             ind = pd.read_csv(i, index_col=None, dtype=object)
 
-#        if "ClientPricingOption" in i:
-#            mem2 = pd.read_csv(i, index_col=None, dtype=object)
-
-
-    # Need to implement Custom Fields file import (orignal transfer didn't require)
-
 
     # Drop columns we can't use
 
@@ -73,9 +67,6 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
     cus.drop(['FirstName', 'LastName', 'BarcodeID'], axis=1, inplace=True)
 
     notes.drop(['FirstName', 'LastName'], axis=1, inplace=True)
-
-#    mem2.drop(['BarcodeID','Returned', 'Duration', 'DurationUnit', 'PaymentDataID', 'ItemType',
-#    'NumClasses', 'PaymentAmount', 'Program/Service Category', 'FirstName', 'LastName'], axis=1, inplace=True)
 
 
 
@@ -153,9 +144,6 @@ def MBfix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
                 if mostRecent != []:
                     new_mem.append(mostRecent)
 
-
-
-                    ## NEED TO REVIEW ^^^^
 
     # Create new Memberships DB from New_Mem
 

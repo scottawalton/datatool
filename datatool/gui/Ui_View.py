@@ -86,6 +86,10 @@ class Ui_DataTool(object):
         self.actionOpen.setObjectName("actionOpen")
         self.actionFind_and_Replace = QtWidgets.QAction(DataTool)
         self.actionFind_and_Replace.setObjectName("actionFind_and_Replace")
+        self.actionUndo = QtWidgets.QAction(DataTool)
+        self.actionUndo.setObjectName("actionUndo")
+        self.actionRedo = QtWidgets.QAction(DataTool)
+        self.actionRedo.setObjectName("actionRedo")
         self.menuFile.addAction(self.actionLoad)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionSave)
@@ -100,6 +104,9 @@ class Ui_DataTool(object):
         self.menuOperations.addAction(self.actionNew_Rows_On_Separator)
         self.menuHelp.addAction(self.actionRainmaker)
         self.menuHelp.addAction(self.actionMindBody)
+        self.menuEdit.addAction(self.actionUndo)
+        self.menuEdit.addAction(self.actionRedo)
+        self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionAdd_Row)
         self.menuEdit.addAction(self.actionAdd_Column)
         self.menuEdit.addAction(self.actionDelete)
@@ -151,6 +158,10 @@ class Ui_DataTool(object):
         self.actionDuplicate.setText(_translate("DataTool", "Duplicate"))
         self.actionOpen.setText(_translate("DataTool", "Open"))
         self.actionFind_and_Replace.setText(_translate("DataTool", "Find and Replace"))
+        self.actionUndo.setText(_translate("DataTool", "Undo"))
+        self.actionUndo.setShortcut(_translate("DataTool", "Ctrl+Z"))
+        self.actionRedo.setText(_translate("DataTool", "Redo"))
+        self.actionRedo.setShortcut(_translate("DataTool", "Ctrl+Y"))
 
 
 if __name__ == "__main__":

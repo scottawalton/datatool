@@ -1,15 +1,15 @@
-A tool to help the Spark team do data imports
+datatool is a tool to make cleaning up messy data easier and faster.
 
-Currently has full support for the following sofware exports:
+Currently has full support for exports from the following sofwares:
 
 	- ASF
+	- MemberSolutions
 	- MindBody
 	- PerfectMind
 	- KickSite
 	- RainMaker
 	- ZenPlanner
 
-For all other exports, I've made scripts to deal with common problems you will encounter when cleaning the Sparktans' data. 
+For all other data, I've made operations to deal with common problems you will encounter when cleaning it. 
 
-For the time being, this is a console application. 
-A GUI made in PyQt5 is coming soon.
+datatool is cross-platform and prefers CSV files.

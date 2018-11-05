@@ -7,13 +7,11 @@ import software
 import procedures
 
 
-# If called as executable
-
 if __name__ == '__main__':
 
     # Handle arguments
 
-    parser = argparse.ArgumentParser(description="Cleans up Spark's csv files")
+    parser = argparse.ArgumentParser(description="Cleans up messy data files.")
     parser.add_argument('-f', '--filepath', default=os.getcwd(), type=str, metavar='', help='Path to file')
     parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM','KS', 'PM', 'MB', 'ASF', 'ZP', 'MS'],help='Type of data file, e.g. RM, PM')
     parser.add_argument('-e', '--extract', action='store_true', help='Convert from Excel to CSV')

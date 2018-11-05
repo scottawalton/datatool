@@ -2,20 +2,15 @@ import pandas as pd
 import glob
 import sys, os
 
-def ASFfix(path_to_files=os.getcwd(), key="ASF ACCT#", **kwargs):
+def ASFfix(path=os.getcwd(), key="ASF ACCT#", **kwargs):
 
 
-    path = path_to_files + '/*.CSV'
+    path = path + '/*.CSV'
     files = glob.glob(path)
 
     # Load Files in ------------------------------------------------------------
 
     for i in files:
-        if "ARF" in i:
-            arf = pd.read_csv(i, index_col=None, dtype=object,
-                    names = ["BANK ACCT/CC#","RECORD DATE","CC EXP","BANK RT#","ASF ACCT#","CLUB#",
-                    "PMT AMT","TRANS DTE","REJECT REASON","REJECT ERROR","DUE DATE","DESCRIPTN","NAME",
-                    "RECRRNG ID","CHKG/SAVGS","TYPE","STATUS","INT FLAG","NUM PT SESS"])
         if "CLC" in i:
             clc = pd.read_csv(i, index_col=None, dtype=object,
                     names = ["CLUB","ASF ACCT#","MBR SEQ #","FIRST NAME","LAST NAME","DOB","ALT / BARCD #"])
@@ -66,13 +61,13 @@ def ASFfix(path_to_files=os.getcwd(), key="ASF ACCT#", **kwargs):
 
     #Memberships Clean
     rec = rec.drop(['CLUB'], axis=1)
-#    need info to be copied from main contact, but retain info on this one. right merge
+    # need info to be copied from main contact, but retain info on this one. right merge
 
 
     #Merge files together ------------------------------------------------------
 
     needs_merge = [emr, note]
-    # CLC is not included because it needs to be merged seperatly and then appended
+    # CLC is not included because it needs to be merged separatly and then appended
     complete = clm
 
     for x in needs_merge:

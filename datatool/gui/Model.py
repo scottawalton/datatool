@@ -6,13 +6,27 @@ import pandas as pd
 import numpy as np
 import procedures
 
-# This is the model
-
 class PandasTable(QtCore.QAbstractTableModel):
+    """
+    An instance of a pandas dataframe that can be displayed in a PyQt TableView,
+    as well as have procedures applied to it. It requires a dataframe to be initialized.
+
+        :param data: 
+            The pandas dataframe you wish to load in
+    """   
+
     #region Constructor
-    def __init__(self, data, tabNumber=1, parent=None):
+    def __init__(self, data, parent=None):
         QtCore.QAbstractTableModel.__init__(self, parent)
+
+        # Store the given parent in an attribute so don't have to pass it to every function
+        self.parent = parent
+
+        # Store the pandas dataframe in an attribute
         self.df = data
+
+        # Initialize the Undo/Redo stack of states
+        self.initiateStack()
 
     def rowCount(self, parent):
         return len(self.df)
@@ -21,6 +35,16 @@ class PandasTable(QtCore.QAbstractTableModel):
         return len(self.df.columns)
     
     def data(self, index, role):
+        """
+        This is called whenever a layoutChanged or dataChanged signal is emitted.
+        Returns the data stored in the df attribute at the given index.
+
+            :param index: 
+                Passed to us by the TableView, a PyQt QModelIndex
+            :param role: 
+                Passed to us by the TableView, a Qt.DisplayRole
+        """   
+
         if role == QtCore.Qt.DisplayRole:
             row = index.row()
             column = index.column()
@@ -34,12 +58,25 @@ class PandasTable(QtCore.QAbstractTableModel):
         return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
+        """
+        Interprets the data we enter when we submit data through the TableView.
+        Appends a state to the stack.
+
+            :param index: 
+                A QIndexModel specifying the coordinates of the changed cell.
+            :param value: 
+                A QItemModel storing the new data.
+            :param role=QtCore.Qt.EditRole: 
+                The role of the passed signal.
+        """   
+        
         if role == QtCore.Qt.EditRole:
             col = index.column()
             row = index.row()
             try:
                 self.df.iloc[row][col] = value
                 self.dataChanged.emit(index, index)
+                self.appendState()
                 return True
             except:
                 return False
@@ -51,12 +88,50 @@ class PandasTable(QtCore.QAbstractTableModel):
             else:
                 return section
     #endregion
-    
-    def saveData(self, path):
 
+    #region State Functionality
+
+    # Implements undo-redo functionality with a stack of states
+    def initiateStack(self):
+        self.stateStack = [self.df.copy()]
+        self.stateStackCurrent = 0
+
+    def appendState(self):
+        self.stateStack.append(self.df.copy())
+        self.stateStackCurrent += 1
+    
+    def backwardState(self):
+        if self.stateStackCurrent != 0:
+            self.stateStackCurrent -= 1
+            self.df = self.stateStack[self.stateStackCurrent]
+            self.layoutChanged.emit()
+        else:
+            QtWidgets.QMessageBox.about(self.parent, "Notice" , "Already at earliest change." )
+            self.layoutChanged.emit()
+
+    def forwardState(self):
+        if self.stateStackCurrent != (len(self.stateStack) - 1):
+            self.stateStackCurrent += 1
+            self.df = self.stateStack[self.stateStackCurrent]
+            self.layoutChanged.emit()
+        else:
+            QtWidgets.QMessageBox.about(self.parent, "Notice", "Already at most recent change.")
+
+    #endregion
+
+    #region Operations
+    def saveData(self, path):
         self.df.to_csv(path[0], quoting=1, index=False)
 
     def deleteData(self, selectionModel):
+        """
+        Deletes the selected columns/rows from the table.
+        Adds a state to the Undo/Redo stack and refreshes the view upon success.
+
+            :param selectionModel: 
+                The current selection, supplied in a QItemSelectionModel
+        """
+
 
         cols, rows = self.translateSelection(selectionModel)       
 
@@ -67,6 +142,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.df = self.df.drop(cols, axis=1)
             self.layoutChanged.emit()
             selectionModel.clear()
+            self.appendState()
 
         # otherwise: check if rows are selected
         elif rows != None:
@@ -75,16 +151,22 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.df = self.df.reset_index(drop=True)
             self.layoutChanged.emit()
             selectionModel.clear()
+            self.appendState()
         
         else:
-            msg = QtWidgets.QMessageBox()
-            msg.setText("No columns or rows selected.")
-            msg.exec()
+            QtWidgets.QMessageBox.about(self.parent, "Notice", "No columns or rows selected.")
 
-    # Translates a selection model into column names
-    # Eventually want to implement foreach functionality into this and refactor
-    # Returns a tuple of column names and row indexes
     def translateSelection(self, selectionModel):
+        """
+        Translates a selection model into column labels and row indexes.
+
+            :param selectionModel: 
+                A QItemSelectionModel
+
+
+        Returns:
+            A tuple of column names and row indexes
+        """
 
         selectionColumns = selectionModel.selectedColumns()
         selectionRows = selectionModel.selectedRows()
@@ -109,71 +191,127 @@ class PandasTable(QtCore.QAbstractTableModel):
             return None, None
 
     def clearWhitespace(self, selectionModel):
+        """
+        Removes all newlines, leading and trailing whitespace, carriage returns, and invisible tab-breaks from the selected column(s).
+        If no columns are selected, acts on entire dataframe. \n
+        Adds a state to the Undo/Redo stack and refreshes the view upon success.
+        """
 
         selection = self.translateSelection(selectionModel)       
         # If columns are selected, do the operation on each of them, 
         if selection[0] != None:
-            for col in selection[0]:
-                self.df = procedures.strip_whitespace(self.df, col)
+            procedures.strip_whitespace(self.df, column=selection[0])
+            self.appendState()
         # otherwise: do it on the entire dataframe
         else:
             self.df = procedures.strip_whitespace(self.df)
+            self.appendState()
         
         selectionModel.clear()
 
     def removeNonNumeric(self, selectionModel):
+        """
+        Removes everything but numeric characters from a column. \n
+        A column selection is required; user is alerted upon failure to select a column. \n
+        Adds a state to the Undo/Redo stack and refreshes the view upon success.
+        """
 
         selection = self.translateSelection(selectionModel)
 
         # If columns are selected, do the operation on each of them, 
         if selection[0] != None:
-            for col in selection[0]:
-                procedures.clean_phones(self.df, col)
+            procedures.clean_phones(self.df, selection[0])
+            self.appendState()
         # otherwise: let the user know they need to select a column
         else:
-            msg = QtWidgets.QMessageBox()
-            msg.setText("No column selected.")
-            msg.exec()
+            QtWidgets.QMessageBox.about(self.parent, "Notice", "No column selected.")
 
         selectionModel.clear()
 
     def correctDateFormat(self, selectionModel):
+        """
+        Accepts almost any date format and convert it to MM/DD/YYYY. \n
+        A column selection is required; user is alerted upon failure to select a column. \n
+        Adds a state to the Undo/Redo stack and refreshes the view upon success.
+        """
         
         selection = self.translateSelection(selectionModel)
 
-        # If columns are selected, do the operation on each of them, 
         if selection[0] != None:
-            for col in selection[0]:
-                procedures.fix_zp_dates(self.df, col)
-        # otherwise: let the user know they need to select a column
+            procedures.fix_dates(self.df, selection[0])
+            self.appendState()
         else:
-            msg = QtWidgets.QMessageBox()
-            msg.setText("No column selected.")
-            msg.exec()
+            QtWidgets.QMessageBox.about(self.parent, "Notice", "No column selected.")
 
         selectionModel.clear()
     
     def ranksByPrograms(self, ranks, programs):
+        """
+        Distributes values in ranks column into columns created based on unique values in programs column. \n
+        Adds a state to the Undo/Redo stack and refreshes the view upon success.
+
+            :param ranks: 
+                The values that need to be distributed.
+            :param programs: 
+                The values to create columns of.
+        """
 
         if ranks == '' or programs == '':
-            msg = QtWidgets.QMessageBox()
-            msg.setText("Both selecions need to be valid.")
-            msg.exec()
+            QtWidgets.QMessageBox.critical(self.parent, "Notice", "One or more of the selections are invalid.")
         
         elif ranks == None or programs == None:
             pass
 
         else:
-            procedures.fix_ranks(self.df, ranks, programs)
+            self.df = procedures.fix_ranks(self.df, ranks, programs)
+            self.appendState()
             self.layoutChanged.emit()
 
     def findAndReplace(self, findText, replaceText, selectionModel):
-        #TODO: 
-        pass
+        """
+        Finds all findText in currently selected columns and replaces with given replaceText.
+        Regex is enabled by default. \n
+
+        Adds a state to the Undo/Redo stack and refreshes the view upon success.
+
+            :param findText: 
+                The text to search for.
+            :param replaceText: 
+                The text to replace the found text with.
+
+        If no selection is given, it will prompt if you wish to apply to the entire dataframe.
+        """
+
+        selection = self.translateSelection(selectionModel)
+
+        if selection[0] != None:
+            for col in selection[0]:
+                self.df[col] = self.df[col].str.replace(findText, replaceText, regex=True)
+            self.appendState()
+        else:
+            reply = QtWidgets.QMessageBox.question(self.parent, 'No Columns Selected', \
+                'There are no selected columns. Would you like to apply this operation to the entire sheet?',
+                QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+            if reply == QtWidgets.QMessageBox.Yes:
+                self.df.replace({findText : replaceText}, regex=True, inplace=True)
+                self.appendState()
+            
+            else:
+                pass
+
+        selectionModel.clear()
+    #endregion
 
 class RanksByProgramsDialogBox(QtWidgets.QDialog):
-    
+    """
+    A dialog box to get the information required by the ranksbyPrograms function.
+    """
+
     def __init__(self, pandaTable, parent):
+        """
+        Initializes the UI and sets the two dropdowns to display column names of the active Panda.
+        """   
+
         QtWidgets.QDialog.__init__(self)
 
         self.df = pandaTable
@@ -197,6 +335,10 @@ class RanksByProgramsDialogBox(QtWidgets.QDialog):
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def getResults(self, parent=None):
+        """
+        Returns the user's input
+        """   
+
         dialog = RanksByProgramsDialogBox(self.df, parent)
         result = dialog.exec_()
         if result == QtWidgets.QDialog.Accepted:
@@ -205,8 +347,15 @@ class RanksByProgramsDialogBox(QtWidgets.QDialog):
             return None, None
 
 class FindAndReplaceDialogBox(QtWidgets.QDialog):
+    """
+    A dialog box to retrieve the two text values required by the findAndReplace function.
+    """
     
     def __init__(self, parent):
+        """
+        Initializes the UI and sets the properties.
+        """   
+
         QtWidgets.QDialog.__init__(self)
 
         self.findText = QtWidgets.QLineEdit()
@@ -226,6 +375,10 @@ class FindAndReplaceDialogBox(QtWidgets.QDialog):
         self.setWindowModality(QtCore.Qt.ApplicationModal)
 
     def getResults(self, parent=None):
+        """
+        Returns the user's input
+        """   
+
         dialog = FindAndReplaceDialogBox(parent)
         result = dialog.exec_()
         if result == QtWidgets.QDialog.Accepted:

@@ -10,32 +10,37 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
     path = path_to_files + '/*.csv'
     files = glob.glob(path)
 
-    main = pd.DataFrame()
-
     for i in files:
         if "Active" in i:
             active = pd.read_csv(i, index_col=None, dtype=object)
+        else:
+            active = pd.DataFrame()
 
         if "Frozen" in i:
             frozen = pd.read_csv(i, index_col=None, dtype=object)
-
+        else:
+            frozen = pd.DataFrame()
 
         if "recurring" in i:
             billing = pd.read_csv(i, index_col=None, dtype=object)
+        else:
+            billing = pd.DataFrame()
 
         if "Prospect" in i:
             prospects = pd.read_csv(i, index_col=None, dtype=object)
+        else:
+            prospects= pd.DataFrame()
 
         if "families" in i:
             fam  = pd.read_csv(i, index_col=None, dtype=object, names=['Family', 'Members', 'Created', 'Edit'])
+        else:
+            fam = pd.DataFrame()
 
         if "Inactive" in i:
             inactive  = pd.read_csv(i, index_col=None, dtype=object)
+        else:
+            inactive = pd.DataFrame()
 
-    # Rename for merge
-
-    con.rename(columns={'Inquiry Date': 'Date Added'}, inplace=True)
-    ranks.rename(columns={'Person': 'Full Name'}, inplace=True)
 
     # Drop columns we can't use
 
@@ -51,29 +56,67 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
 
     ## Prospects ##
 
-    contactTypes = {'trial': 'T', "archived": "P"}
-    prospects['Prospect Status'] = prospects['Prospect Status'].map(contactTypes)
-    prospects.rename(columns={'Prospect Status': 'Contact Type', 'Prospect Source': 'Source', 'Phone': 'Mobile'}, inplace=True)
+    if prospects != pd.DataFrame():
+        contactTypes = {'trial': 'T', "archived": "P"}
+        prospects['Prospect Status'] = prospects['Prospect Status'].map(contactTypes)
+        prospects.rename(columns={'Prospect Status': 'Contact Type', 'Prospect Source': 'Source', 'Phone': 'Mobile'}, inplace=True)
 
     ## Frozen ##
 
-    frozen.drop(['Frozen','Frozen on','Freeze Until'], axis=1, inplace=True)
-    active = active.append(frozen, sort=False)
-    #append frozen to active -- they are treated as regular students
+    if frozen != pd.DataFrame():
+        frozen.drop(['Frozen','Frozen on','Freeze Until'], axis=1, inplace=True)
+        active = active.append(frozen, sort=False)
 
     ## Active ##
 
-    contactTypes = {'Yes': 'S', "No": "F"}
-    active['Active'] = active['Active'].map(contactTypes)
-    active.rename(columns={'Active': 'Contact Type', 'Student Source': 'Source'}, inplace=True)
+    if active != pd.DataFrame():
+        contactTypes = {'Yes': 'S', "No": "F"}
+        active['Active'] = active['Active'].map(contactTypes)
+        active.rename(columns={'Active': 'Contact Type', 'Student Source': 'Source'}, inplace=True)
 
     ## Inactive ##
 
-    inactive['Active'].replace({'No': 'F', 'Yes':"A"}, inplace=True)
-    inactive.rename(columns={'Active': 'Contact Type','Student Source': 'Source'}, inplace=True)
+    if inactive != pd.DataFrame():
+        inactive['Active'].replace({'No': 'F', 'Yes':"A"}, inplace=True)
+        inactive.rename(columns={'Active': 'Contact Type','Student Source': 'Source'}, inplace=True)
+        active = active.append(inactive, sort=False)
+
+    ## Families ##
+
+    if fam != pd.DataFrame():
+        fam.drop(['Edit', 'Created'], inplace=True, axis=1)
+        index = len(fam.index.values)
+        for rowIndex, row in fam.iterrows():
+            if not(isinstance(row['Members'], float)) and '\n' in row['Members']:
+                members = row['Members'].split('\n')
+                for member in members:
+                    index += 1
+                    fam.loc[index] = [row['Family'], member]
+            fam.drop(rowIndex, inplace=True)
+
+        fam['Members'] = fam['Members'].str.extract('(.*)\s\d+',expand=True)
+
+    ## Memberships ##
+
+    # split famliy memberships into individuals based on family file
+
+    if fam != pd.DataFrame() and billing != pd.DataFrame():
+        fam_billing = billing[pd.isnull(billing['Billable first name'])]
+        billing = billing[pd.notnull(billing['Billable first name'])]
+        billing['Members'] = billing['Billable first name'] + ' ' + billing['Billable last name']
+        fam_billing.rename(columns={'Billable last name': 'Family'}, inplace=True)
+        fam_billing = fam_billing.merge(fam, on='Family')
+        billing = billing.append(fam_billing, sort=False)
+
+        billing = billing.sort_values('Status').drop_duplicates(subset=['Members'],keep='first')
+
+        billing.drop(['Inactivated Date','Auto Inactivated', 'Consecutive Declines',
+            'Last Declined Date', 'Days until next charge', 'Billable first name',
+            'Billable last name', 'Family'], axis=1, inplace=True)
+
 
     # All Sheets
-    sheets = [active, prospects, inactive]
+    sheets = [active, prospects]
     for sheet in sheets:
 
         if 'Gender' in sheet.columns.values:
@@ -101,43 +144,6 @@ def KSfix(path_to_files=os.getcwd(), key='Id', **kwargs):
 
         if 'Current Ranks' in sheet.columns.values and 'Programs' in sheet.columns.values:
             procedures.fix_ranks(sheet, ranks='Current Ranks', programs='Programs')
-
-
-
-    ## Families ##
-
-    fam.drop(['Edit', 'Created'], inplace=True, axis=1)
-    index = len(fam.index.values)
-    for rowIndex, row in fam.iterrows():
-        if not(isinstance(row['Members'], float)) and '\n' in row['Members']:
-            members = row['Members'].split('\n')
-            for member in members:
-                index += 1
-                fam.loc[index] = [row['Family'], member]
-        fam.drop(rowIndex, inplace=True)
-
-    fam['Members'] = fam['Members'].str.extract('(.*)\s\d+',expand=True)
-
-    ## Memberships ##
-
-    # split famliy memberships into individuals based on family file
-
-    fam_billing = billing[pd.isnull(billing['Billable first name'])]
-    billing = billing[pd.notnull(billing['Billable first name'])]
-    billing['Members'] = billing['Billable first name'] + ' ' + billing['Billable last name']
-    fam_billing.rename(columns={'Billable last name': 'Family'}, inplace=True)
-    fam_billing = fam_billing.merge(fam, on='Family')
-    billing = billing.append(fam_billing, sort=False)
-
-    # drop excess columns
-
-    billing.drop(['Inactivated Date','Auto Inactivated', 'Consecutive Declines',
-        'Last Declined Date', 'Days until next charge', 'Billable first name',
-        'Billable last name', 'Family'], axis=1, inplace=True)
-
-    # takes active membership
-    billing = billing.sort_values('Status').drop_duplicates(subset=['Members'],keep='first')
-
 
     ## Merge files ##
 

@@ -9,16 +9,21 @@ import procedures
 import re
 import traceback
 
-# This is the controller
-
 class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
+    """
+    This is the main window of the application.
+    Upon initialization, we bind all of the signals to functions and initialize the UI.
+    
+        :param filename=None: 
+            The filename of the file we are opening, if we load one on launch.
+        :param path=os.getcwd(: 
+            The path to the file we want to open, if we load one on launch.
+    """   
 
     def __init__(self, filename=None, path=os.getcwd()):
         super(QtWidgets.QMainWindow, self).__init__()
-
         self.setupUi(self)
 
-        # If a file was specified, load it up. If not, load empty.
         if filename != None:
             data = procedures.load(filename, path)
             panda = Model.PandasTable(data)
@@ -36,6 +41,8 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
         # Edit Menu Actions
         self.actionDelete.triggered.connect(self.deleteData)
+        self.actionUndo.triggered.connect(self.undo)
+        self.actionRedo.triggered.connect(self.redo)
 
         # Operations Menu Actions
         self.actionClear_Whitespace.triggered.connect(self.clearWhitespace)
@@ -47,8 +54,15 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         # Run button
         self.runButton.clicked.connect(self.runCommand)
 
-    # Translates and runs commands entered through the text area
     def runCommand(self):
+        """
+        Handles all python code entered into the text area on the bottom half of the application.
+        It automatically converts df, df2, df3, etc.. into valid code representing the open sheets,
+        based on the index of their tab.
+
+        You will be notified if the code has any syntax errors via a message box.
+        """
+
 
         command = self.textEdit.toPlainText()
 
@@ -56,10 +70,8 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
             self.notifyUser("No command entered.")
         else:
 
-            # Allows us to use df to specify the first tab's dataframe
             command = re.sub( r'df(?!\d)' , 'self.getPanda(0).df', command)
 
-            # This allows us to use df2 df3 etc.. to refer to the proceding tabs' dataframes
             match = re.findall(r'df\d', str(command))
             if match is not None:
                 for x in match:
@@ -69,22 +81,42 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
             try:
                 exec(command)
                 self.getCurrentPanda().layoutChanged.emit()
+                self.getCurrentPanda().appendState()
             
-            # Lets user know they messed up and how
             except:
                 errorMsg = 'There was a problem with the command entered. ' + \
-                           'See stack trace or show Scott: \n\n' + traceback.format_exc()
+                           'See stack trace: \n\n' + traceback.format_exc()
                 self.notifyUser(errorMsg)
 
-    # A simple message box to let the user know about something
+    def undo(self):
+        self.getCurrentPanda().backwardState()
+
+    def redo(self):
+        self.getCurrentPanda().forwardState()
+
     def notifyUser(self, message):
-        msg = QtWidgets.QMessageBox()
+        """
+        A simple message box to tell the user something.
+        They cannot proceed until they press 'Ok'.
+
+            :param message: 
+                The message you want to share with the user.
+        """   
+
+
+        msg = QtWidgets.QMessageBox(self)
         msg.setText(message)
-        msg.exec()
+        msg.exec_()
 
     #region Tab Functionality
-    # Gets the tableView currently in focus
     def getCurrentView(self):
+        """
+        Retrieves the currently visible tab's TableView.
+
+        Returns:
+            PyQt5 QTableView
+        """
+
 
         currentTab = self.tabWidget.currentWidget()
         
@@ -92,8 +124,14 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
         return View
 
-    # Gets the PandaTable currently in focus
     def getCurrentPanda(self):
+        """
+        Retrieves the currently visible tab's PandasTable model.
+
+        Returns:
+            PandasTable model
+        """
+
 
         view = self.getCurrentView()
 
@@ -103,15 +141,33 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         else:
             return None
 
-    # Gets the PandaTable at the given index
     def getPanda(self, index):
+        """
+        Retrieves the PandasTable model at the given tab index.
+
+            :param index: 
+                The index of the tab of the desired PandasTable
+        
+        Returns:
+            PandasTable model
+        """
+        
+
         tab = self.tabWidget.widget(index)
         view = tab.findChild(QtWidgets.QTableView)
         panda = view.model()
         return panda
 
-    # Creates a new tab with the given PandaTable
     def createTab(self, panda):
+        """
+        Creates a new tab with the given PandasTable model displayed in a TableView.
+        Automatically appends it to the end of the tab bar.
+
+            :param panda: 
+                The PandasTable model you wish to display
+        
+        """
+
 
         tab = QtWidgets.QWidget()
         tab.setObjectName("tab")
@@ -128,20 +184,24 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         tableView.setModel(panda)
         self.tabWidget.addTab(tab, "Tab")
 
-    # Deletes all tabs in the tabWidget
     def deleteAllTabs(self):
-        
-        # Iterate through all tabs, removing each
-        for i in range(0,self.tabWidget.count()):
-            self.tabWidget.removeTab(i)
+        """
+        Deletes all tabs in the tab bar.
+        """   
 
-        # For whatever reason, this one likes to stay, so we delete it explicitly
-        self.tabWidget.removeTab(self.tabWidget.currentIndex())
+        while self.tabWidget.count() != 0:
+
+                self.tabWidget.removeTab(self.tabWidget.currentIndex())
 
     #endregion
 
     #region File Menu
     def loadData(self):     
+        """
+        Prompts the user to select a file to load into view. Deletes all other open tabs upon successful load.
+        If an invalid path is given, the user is notified.
+        """
+
 
         path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getenv('HOME'), 'CSV(*.csv)')
 
@@ -150,9 +210,9 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
             if os.path.exists(path[0]) and os.path.getsize(path[0]):
 
-                self.OriginalData = pd.read_csv(path[0], index_col=None, dtype=object)
+                fileData = pd.read_csv(path[0], index_col=None, dtype=object)
 
-                panda = Model.PandasTable(self.OriginalData)
+                panda = Model.PandasTable(fileData)
 
                 self.deleteAllTabs()
                 self.createTab(panda)
@@ -161,6 +221,11 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
                 self.notifyUser("Please pick a valid file.")
 
     def openData(self):
+        """
+        Prompts the user for a file to load into view, instantiates a new PandasTable 
+        with the user's selection and opens it in a new tab. If an invalid path is given, the user is notified.
+        """
+
 
         path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getenv('HOME'), 'CSV(*.csv)')
 
@@ -179,17 +244,26 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
                 self.notifyUser("Please pick a valid file.")
 
     def saveData(self):
+        """
+        Prompts the user to pick a place to save the active PandasTable as a CSV file
+        and passes the location to the active PandasTable to save to disk.
+        """
+
 
         path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', os.getenv('$HOME'))
 
         self.getCurrentPanda().saveData(path)
 
     def Exit(self):
+        """
+        Quits the application.
+        """   
+        
+
         QtCore.QCoreApplication.exit()
     #endregion
 
     #region Edit Menu
-
     def deleteData(self):
 
         # A selection model to get the current selection
@@ -201,7 +275,6 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
     #endregion
 
     #region Operations Menu
-
     def clearWhitespace(self):
 
         # A selection model to get the current selection
@@ -227,6 +300,12 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.getCurrentPanda().correctDateFormat(selectionModel)
 
     def ranksByProgram(self):
+        """
+        Prompts the user to select a column of unique values 
+        (programs) to distribute the other column's (ranks) values into.
+
+        Passes the selected values to the active Panda to deal with.
+        """
 
         # Prompts user and gets a set of values
         ranks, programs = Model.RanksByProgramsDialogBox.getResults(self.getCurrentPanda(), self)
@@ -235,6 +314,12 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.getCurrentPanda().ranksByPrograms(ranks, programs)
 
     def findAndReplace(self):
+        """
+        Prompts the user to input text to search for and text to replace it with.
+        Accepts regex by default.
+
+        Passes the given values to the active Panda to deal with.
+        """
 
         # Prompts user for find regex and replace text
         findText, replaceText = Model.FindAndReplaceDialogBox.getResults(self)
@@ -243,7 +328,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         selectionModel = self.getCurrentView().selectionModel()
 
         # Pass to panda
-        self.getCurrentPanda().findAndReplace(findText, replaceText, selectionModel)
+        self.getCurrentPanda().findAndReplace(findText, replaceText, selectionModel, self)
 
     #endregion
 
