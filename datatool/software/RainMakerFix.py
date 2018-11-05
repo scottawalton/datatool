@@ -4,7 +4,7 @@ import sys, os
 import numpy as np
 import re
 
-def RMfix(df):
+def RMfix(df, parents=None):
 
     # Fix Billing Companys and Payment Methods
 
@@ -101,5 +101,9 @@ def RMfix(df):
     df['Billing_Company'] = np.where((df['Payment_Method'] == 'PIF') & (df['Billing_Company'].isnull()), 'PIF', df['Billing_Company'])
 
     df.dropna(how='all', inplace=True, axis=1)
+
+    if isinstance(parents, pd.DataFrame):
+        df = df.merge(parents, on='ID', how='left')
+        df.drop_duplicates(inplace=True)
 
     df.to_csv('clean_' + 'RM' + '.csv', index=False, quoting=1)

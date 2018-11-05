@@ -4,9 +4,7 @@ import sys, os
 import numpy as np
 import argparse
 import re
-import software
 import datetime
-import csv
 
 def load(filename, filepath=os.getcwd()):
     """

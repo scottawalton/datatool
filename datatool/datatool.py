@@ -42,12 +42,15 @@ if __name__ == '__main__':
 
     elif args.type == 'RM':
 
-        # Load in file specified by filename
         if args.filename == None:
             print('You need to specify the filename.')
         else:
             df = procedures.load(args.filename, args.filepath)
-            software.RainMakerFix.RMfix(df)
+            try:
+                parents = procedures.load('ParentsNames.csv', args.filepath)
+                software.RainMakerFix.RMfix(df, parents)
+            except:
+                software.RainMakerFix.RMfix(df)
 
     elif args.gui == True and args.filename != None:
         app = QtWidgets.QApplication(sys.argv)
