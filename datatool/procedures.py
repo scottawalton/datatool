@@ -6,7 +6,6 @@ import argparse
 import re
 import software
 import datetime
-import xlrd
 import csv
 
 def load(filename, filepath=os.getcwd()):
