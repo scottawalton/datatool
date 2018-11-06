@@ -1,20 +1,24 @@
-import pandas as pd
+"""
+datatool - to make cleaning data easier and faster,
+
+Created by: Scott Walton
+"""
+
+import os
 import glob
-import sys, os
+
 import numpy as np
-import argparse
-import re
-import datetime
+import pandas as pd
 
 def load(filename, filepath=os.getcwd()):
     """
     Loads the given filename found at filepath with the preferred options.
 
-        :param filename: 
+        :param filename:
             The name of the file.
-        :param filepath: 
+        :param filepath:
             The path of the file.
-    
+
     Returns:
         Pandas DataFrame
     """
@@ -26,14 +30,14 @@ def load(filename, filepath=os.getcwd()):
             df = pd.read_csv(path, index_col=None, dtype=object)
             return df
         except:
-            df = pd.read_csv(path, index_col=None, dtype=object, encoding="ISO-8859-1" )
+            df = pd.read_csv(path, index_col=None, dtype=object, encoding="ISO-8859-1")
             return df
 
 def csv_from_excel(path=os.getcwd()):
     """
     Converts all xls files at the given path to CSV files and outputs them into a directory named after the file.
     If the xls file has sheets, those are also outputted to the new directory.
-        :param path=os.getcwd(: 
+        :param path=os.getcwd(:
             The path to the xls file(s).
     """
     path = path + '/*.xls*'
@@ -46,16 +50,15 @@ def csv_from_excel(path=os.getcwd()):
         if len(xls_file.sheet_names) > 1:
             try:
                 os.mkdir(filename)
-            except:
+            except OSError:
                 print('Could not create directory to output to.')
-                pass
-            for i in xls_file.sheet_names:
-                file = pd.read_excel(xls_file, i, index_col=None, dtype=object)
-                file.to_csv(filename + '/' + i + '.csv', quoting=csv.QUOTE_ALL, index = False)
+            for x in xls_file.sheet_names:
+                file = pd.read_excel(xls_file, x, index_col=None, dtype=object)
+                file.to_csv(filename + '/' + x + '.csv', quoting=1, index=False)
 
         else:
             file = xls_file.parse()
-            file.to_csv( filename + '.csv',quoting=csv.QUOTE_ALL, index = False)
+            file.to_csv(filename + '.csv', quoting=1, index=False)
 
 def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
     """
@@ -63,29 +66,29 @@ def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
 
         :param df:
             The dataframe to perform the operation on.
-        :param ranks: 
+        :param ranks:
             The values that need to be distributed.
-        :param programs: 
+        :param programs:
             The values to create columns of.
-    
+
     Returns:
         Pandas DataFrame
     """
 
     # Create columns based on unique program values
     if programs in df:
-        uniquePrograms = set(df[programs].unique())
-        if np.nan in uniquePrograms:
-            uniquePrograms.remove(np.nan)
-        for value in uniquePrograms.copy():
-            valList = value.split(', ')
-            if len(valList) > 1:
-                for commaSplitValue in value.split(', '):
-                    if commaSplitValue not in uniquePrograms:
-                        uniquePrograms.add(commaSplitValue)
-                uniquePrograms.remove(value)
+        unique_programs = set(df[programs].unique())
+        if np.nan in unique_programs:
+            unique_programs.remove(np.nan)
+        for value in unique_programs.copy():
+            val_list = value.split(', ')
+            if len(val_list) > 1:
+                for comma_split_value in value.split(', '):
+                    if comma_split_value not in unique_programs:
+                        unique_programs.add(comma_split_value)
+                unique_programs.remove(value)
 
-        for x in uniquePrograms:
+        for x in unique_programs:
             if x not in df.columns.values:
                 df[x] = ""
 
@@ -120,25 +123,26 @@ def fix_ranks(df, ranks='Current Ranks', programs='Programs'):
 
 def split_phones(df, column):
     """
-    Distributes the values in the phones column based on the identifier given in parentheses into either Home, Mobile, or Work.
+    Distributes the values in the phones column based on the identifier
+    given in parentheses into either Home, Mobile, or Work.
 
-        :param df: 
+        :param df:
             The dataframe to perform the operation on.
-        :param phones: 
+        :param phones:
             The column with phones to split.
-    
+
         :return:
             Pandas DataFrame
     """
 
-    df['Work'] = df[column].str.extract(r'(...-...-....)\(W\)',expand=True)
-    df['Mobile'] = df[column].str.extract(r'(...-...-....)\(M\)',expand=True)
-    df['Mobile 2'] = df[column].str.extract(r'...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
-    df['Mobile 3'] = df[column].str.extract(r'...-...-....\(M\).*?...-...-....\(M\).*?(...-...-....)\(M\)',expand=True)
-    df['Home'] = df[column].str.extract(r'(...-...-....)\(H\)',expand=True)
-    df['Mobile_'] = df[column].str.extract(r'(...-...-....)\(C\)',expand=True)
-    df['Mobile 2_'] = df[column].str.extract(r'...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
-    df['Mobile 3_'] = df[column].str.extract(r'...-...-....\(C\).*?...-...-....\(C\).*?(...-...-....)\(C\)',expand=True)
+    df['Work'] = df[column].str.extract(r'(...-...-....)\(W\)', expand=True)
+    df['Mobile'] = df[column].str.extract(r'(...-...-....)\(M\)', expand=True)
+    df['Mobile 2'] = df[column].str.extract(r'...-...-....\(M\).*?(...-...-....)\(M\)', expand=True)
+    df['Mobile 3'] = df[column].str.extract(r'...-...-....\(M\).*?...-...-....\(M\).*?(...-...-....)\(M\)', expand=True)
+    df['Home'] = df[column].str.extract(r'(...-...-....)\(H\)', expand=True)
+    df['Mobile_'] = df[column].str.extract(r'(...-...-....)\(C\)', expand=True)
+    df['Mobile 2_'] = df[column].str.extract(r'...-...-....\(C\).*?(...-...-....)\(C\)', expand=True)
+    df['Mobile 3_'] = df[column].str.extract(r'...-...-....\(C\).*?...-...-....\(C\).*?(...-...-....)\(C\)', expand=True)
     df['Mobile'] = df['Mobile'].combine_first(df['Mobile_'])
     df['Mobile 2'] = df['Mobile 2'].combine_first(df['Mobile 2_'])
     df['Mobile 3'] = df['Mobile 3'].combine_first(df['Mobile 3_'])
@@ -149,52 +153,52 @@ def split_phones(df, column):
 def clean_phones(df, column='Phone'):
     """
     Removes everything but numeric characters from phone column.
-        :param df: 
+        :param df:
             The dataframe to perform the operation on.
-        :param column: 
+        :param column:
             The column to perform the operation on. (accepts lists)
         :return:
             Pandas DataFrame
     """
 
-    if type(column) is list:
+    if isinstance(column, list):
         for x in column:
-            df[x] = df[x].replace(r'[^0-9]','', regex=True)
+            df[x] = df[x].replace(r'[^0-9]', '', regex=True)
         return df
     else:
-        df[column] = df[column].replace(r'[^0-9]','', regex=True)
+        df[column] = df[column].replace(r'[^0-9]', '', regex=True)
         return df
 
 def split_emails(df, column):
     """
     Splits the comma separated values in the emails column into a maximum of 3 different columns.
 
-        :param df: 
+        :param df:
             The dataframe to perform the operation on.
-        :param column: 
+        :param column:
             The column to split.
         :return:
             Pandas DataFrame
     """
 
-    df['Email'] = df[column].str.extract(r'(.*?@.*?\....),?',expand=True)
-    df['Email 2'] = df[column].str.extract(r'.*@.*\....,\s?(.*@.*\....)',expand=True)
-    df['Email 3'] = df[column].str.extract(r'.*@.*\....,\s?.*@.*\....,\s?(.*@.*\....)',expand=True)
+    df['Email'] = df[column].str.extract(r'(.*?@.*?\....),?', expand=True)
+    df['Email 2'] = df[column].str.extract(r'.*@.*\....,\s?(.*@.*\....)', expand=True)
+    df['Email 3'] = df[column].str.extract(r'.*@.*\....,\s?.*@.*\....,\s?(.*@.*\....)', expand=True)
     return df
 
 def fix_dates(df, column=None):
     """
     Converts almost any date format to MM/DD/YYYY.
 
-        :param df: 
+        :param df:
             The dataframe to perform the operation on.
-        :param column: 
+        :param column:
             The column to convert dates on. (accepts lists)
-        
+
     Returns:
         Pandas DataFrame
     """
-    if type(column) == list:
+    if isinstance(column, list):
         for x in column:
             df[x] = pd.to_datetime(df[x])
             df[x] = df[x].dt.strftime('%m-%d-%Y')
@@ -206,43 +210,41 @@ def fix_dates(df, column=None):
 
 def strip_whitespace(df, column=None):
     """
-    Removes all leading and trailing whitespace. Replaces all newlines, 
+    Removes all leading and trailing whitespace. Replaces all newlines,
     carriage returns, and invisible tab-breaks with a space. \n
     If a column isn't specified, it acts on the entire dataframe.
 
-        :param df: 
+        :param df:
             The dataframe to perform the operation on.
-        :param phones: 
+        :param column:
             The column to perform the operation on. (accepts lists)
 
     Returns:
         Pandas DataFrame
     """
 
-    c = column
-
-    if c == None:
-        for c in df.columns:
-            if df[c].dtypes == object:
-                df[c] = pd.core.strings.str_strip(df[c])
-                df[c] = df[c].str.replace('\n', '')
-                df[c] = df[c].str.replace(r'\r',' ', regex=True)
-                df[c] = df[c].str.replace(r'\n',' ', regex=True)
-                df[c] = df[c].str.replace(r'\v',' ', regex=True)
-    elif type(c) == list:
-        for x in c:
+    if column is None:
+        for x in df.columns:
             if df[x].dtypes == object:
                 df[x] = pd.core.strings.str_strip(df[x])
-                df[x] = df[x].str.replace(r'\r',' ', regex=True)
-                df[x] = df[x].str.replace(r'\n',' ', regex=True)
-                df[x] = df[x].str.replace(r'\v',' ', regex=True)
+                df[x] = df[x].str.replace('\n', '')
+                df[x] = df[x].str.replace(r'\r', ' ', regex=True)
+                df[x] = df[x].str.replace(r'\n', ' ', regex=True)
+                df[x] = df[x].str.replace(r'\v', ' ', regex=True)
+    elif isinstance(column, list):
+        for x in column:
+            if df[x].dtypes == object:
+                df[x] = pd.core.strings.str_strip(df[x])
+                df[x] = df[x].str.replace(r'\r', ' ', regex=True)
+                df[x] = df[x].str.replace(r'\n', ' ', regex=True)
+                df[x] = df[x].str.replace(r'\v', ' ', regex=True)
 
     else:
-        if df[c].dtypes == object:
-            df[c] = pd.core.strings.str_strip(df[c])
-            df[c] = df[c].str.replace(r'\r',' ', regex=True)
-            df[c] = df[c].str.replace(r'\n',' ', regex=True)
-            df[c] = df[c].str.replace(r'\v',' ', regex=True)
+        if df[column].dtypes == object:
+            df[column] = pd.core.strings.str_strip(df[column])
+            df[column] = df[column].str.replace(r'\r', ' ', regex=True)
+            df[column] = df[column].str.replace(r'\n', ' ', regex=True)
+            df[column] = df[column].str.replace(r'\v', ' ', regex=True)
 
     return df
 
@@ -251,13 +253,13 @@ def tidy_split(df, column='Members', sep=', '):
     Splits a column of comma separated values into their own rows with values
     identical to the original.
 
-        :param df: 
+        :param df:
             The dataframe to perform the operation on.
 
-        :param column='Members': 
+        :param column='Members':
             The column of values to split.
 
-        :param sep=' ': 
+        :param sep=' ':
             The separator
 
     Returns:
@@ -279,7 +281,7 @@ def drop_quote_rows(df):
     """
     Iterates over a dataframe and drops all rows that contain quotes as part of the string.
 
-        :param df: 
+        :param df:
             The dataframe to perform the operation on.
 
     Returns:

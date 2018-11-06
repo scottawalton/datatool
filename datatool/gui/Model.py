@@ -259,7 +259,7 @@ class PandasTable(QtCore.QAbstractTableModel):
         if ranks == '' or programs == '':
             QtWidgets.QMessageBox.critical(self.parent, "Notice", "One or more of the selections are invalid.")
         
-        elif ranks == None or programs == None:
+        elif ranks is None or programs is None:
             pass
 
         else:

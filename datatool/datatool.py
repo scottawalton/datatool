@@ -1,10 +1,18 @@
-from PyQt5 import QtWidgets
-from gui.Controller import MyWorkingCode
-import pandas as pd
-import sys, os
+"""
+datatool - to make cleaning data easier and faster,
+
+Created by: Scott Walton
+"""
+
+import sys
+import os
 import argparse
+
+from PyQt5.QtWidgets import QApplication
+
 import software
 import procedures
+from gui.Controller import MyWorkingCode
 
 
 if __name__ == '__main__':
@@ -13,53 +21,54 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Cleans up messy data files.")
     parser.add_argument('-f', '--filepath', default=os.getcwd(), type=str, metavar='', help='Path to file')
-    parser.add_argument('-t', '--type', type=str, metavar='', choices=['RM','KS', 'PM', 'MB', 'ASF', 'ZP', 'MS'],help='Type of data file, e.g. RM, PM')
+    parser.add_argument('-t', '--type', type=str, metavar='', help='Type of data file, e.g. RM, PM',
+                        choices=['RM', 'KS', 'PM', 'MB', 'ASF', 'ZP', 'MS'])
     parser.add_argument('-e', '--extract', action='store_true', help='Convert from Excel to CSV')
     parser.add_argument('-g', '--gui', action='store_false', help='Disable the GUI')
     parser.add_argument('filename', help='Csv file to clean', nargs='?', default=None)
     args = parser.parse_args()
 
-    if args.extract == True:
+    if args.extract:
         procedures.csv_from_excel(args.filepath)
 
     elif args.type == 'ZP':
-        software.ZenPlannerMash.ZPfix()
+        software.ZP_fix()
 
     elif args.type == 'PM':
-        software.PerfectMindMash.PMfix()
+        software.PM_fix()
 
     elif args.type == 'MB':
-        software.MindBodyMash.MBfix()
+        software.MB_fix()
 
     elif args.type == 'KS':
-        software.KicksiteMash.KSfix()
+        software.KS_fix()
 
     elif args.type == 'ASF':
-        software.ASFmash.ASFfix()
+        software.ASF_fix()
 
     elif args.type == 'MS':
-        software.MemberSolutionsMash.MSfix()
+        software.MS_fix()
 
     elif args.type == 'RM':
 
-        if args.filename == None:
+        if args.filename is None:
             print('You need to specify the filename.')
         else:
             df = procedures.load(args.filename, args.filepath)
             try:
                 parents = procedures.load('ParentsNames.csv', args.filepath)
-                software.RainMakerFix.RMfix(df, parents)
-            except:
-                software.RainMakerFix.RMfix(df)
+                software.RM_fix(df, parents)
+            except FileNotFoundError:
+                software.RM_fix(df)
 
-    elif args.gui == True and args.filename != None:
-        app = QtWidgets.QApplication(sys.argv)
+    elif args.gui and args.filename is not None:
+        app = QApplication(sys.argv)
         window = MyWorkingCode(args.filename, path=args.filepath)
         window.show()
         sys.exit(app.exec_())
-    
-    elif args.gui == True and args.filename == None:
-        app = QtWidgets.QApplication(sys.argv)
+
+    elif args.gui and args.filename is None:
+        app = QApplication(sys.argv)
         window = MyWorkingCode()
         window.show()
         sys.exit(app.exec_())
