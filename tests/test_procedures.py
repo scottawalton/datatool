@@ -1,4 +1,9 @@
-import pandas as pd
+"""
+datatool - to make cleaning data easier and faster,
+
+Created by: Scott Walton
+"""
+
 import datatool.procedures
 
 
@@ -76,4 +81,3 @@ def test_tidy_split():
     test_data = datatool.procedures.tidy_split(test_data, column="String", sep=", ")
 
     assert test_data.at[5, 'String'] == "blue world"
-    

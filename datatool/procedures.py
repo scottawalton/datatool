@@ -1,5 +1,7 @@
 """
-datatool - to make cleaning data easier and faster,
+Commonly used procedures are kept here to keep code clean
+as well as make life easier. They can be called within the
+GUI at any time by prefixing the function name with "procedures.".
 
 Created by: Scott Walton
 """

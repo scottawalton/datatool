@@ -101,10 +101,21 @@ class PandasTable(QtCore.QAbstractTableModel):
         self.stateStackCurrent += 1
     
     def backwardState(self):
-        if self.stateStackCurrent != 0:
+
+        # This block checks if the latest state is saved.
+        # If it isn't, we add it to the stack
+        if self.stateStackCurrent == len(self.stateStack) -1 and not \
+                self.stateStack[self.stateStackCurrent].equals(self.df):
+            self.appendState() 
             self.stateStackCurrent -= 1
-            self.df = self.stateStack[self.stateStackCurrent]
+            self.df = self.stateStack[self.stateStackCurrent].copy()
             self.layoutChanged.emit()
+
+        elif self.stateStackCurrent != 0:
+            self.stateStackCurrent -= 1
+            self.df = self.stateStack[self.stateStackCurrent].copy()
+            self.layoutChanged.emit()
+
         else:
             QtWidgets.QMessageBox.about(self.parent, "Notice" , "Already at earliest change." )
             self.layoutChanged.emit()
@@ -112,7 +123,7 @@ class PandasTable(QtCore.QAbstractTableModel):
     def forwardState(self):
         if self.stateStackCurrent != (len(self.stateStack) - 1):
             self.stateStackCurrent += 1
-            self.df = self.stateStack[self.stateStackCurrent]
+            self.df = self.stateStack[self.stateStackCurrent].copy()
             self.layoutChanged.emit()
         else:
             QtWidgets.QMessageBox.about(self.parent, "Notice", "Already at most recent change.")
@@ -121,7 +132,7 @@ class PandasTable(QtCore.QAbstractTableModel):
 
     #region Operations
     def saveData(self, path):
-        self.df.to_csv(path[0], quoting=1, index=False)
+        self.df.to_csv(path, quoting=1, index=False)
 
     def deleteData(self, selectionModel):
         """
@@ -333,6 +344,7 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
         cols[logical], cols[visualNew] = cols[visualNew], cols[logical]
 
         self.model().df = self.model().df[cols]
+        self.model().appendState()
         self.model().layoutChanged.emit()
 
     def handlePressed(self):
@@ -351,8 +363,14 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
         self.line.setHidden(True)
         oldName = self.model().df.columns.values[self.sectionedit]
         newName = str(self.line.text())
-        self.model().df.rename(columns={oldName: newName}, inplace=True)
-        self.setCurrentIndex(QtCore.QModelIndex())
+        # this is required because of a bug with Qt where
+        # the editing finished signal is called twice
+        if oldName != newName:
+            self.model().df.rename(columns={oldName: newName}, inplace=True)
+            self.model().appendState()
+            self.model().layoutChanged.emit()
+            self.setCurrentIndex(QtCore.QModelIndex())
+            self.parentWidget().setFocus()
  
     def editHeader(self,section):
         """
@@ -423,6 +441,8 @@ class FindAndReplaceDialogBox(QtWidgets.QDialog):
     """
     A dialog box to retrieve the two text values required by the findAndReplace function.
     """
+
+    # TODO: Add Find only option
     
     def __init__(self, parent):
         """

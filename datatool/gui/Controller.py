@@ -21,7 +21,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
     """   
 
     def __init__(self, filename=None, path=os.getcwd()):
-        super(QtWidgets.QMainWindow, self).__init__()
+        QtWidgets.QMainWindow.__init__(self)
         self.setupUi(self)
 
         if filename != None:
@@ -29,15 +29,15 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
             panda = Model.PandasTable(data)
             self.createTab(panda)
         else:
-            panda = Model.PandasTable(pd.DataFrame())
-            self.createTab(panda)
+            self.newEmptyTab()
 
         # File Menu Actions
         self.actionExit.triggered.connect(self.Exit)
         self.actionLoad.triggered.connect(self.loadData)
         self.actionSave.triggered.connect(self.saveData)
         self.actionOpen.triggered.connect(self.openData)
-
+        self.actionClose_Tab.triggered.connect(self.closeTab)
+        self.actionNew_Tab.triggered.connect(self.newEmptyTab)
 
         # Edit Menu Actions
         self.actionDelete.triggered.connect(self.deleteData)
@@ -158,7 +158,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         panda = view.model()
         return panda
 
-    def createTab(self, panda):
+    def createTab(self, pandaData):
         """
         Creates a new tab with the given PandasTable model displayed in a TableView.
         Automatically appends it to the end of the tab bar.
@@ -168,55 +168,65 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         
         """
 
+        # We create the panda here so we can set the parent to be the tab
+        # When we kill the tab, the panda dies as well
 
-        tab = QtWidgets.QWidget()
+        tab = QtWidgets.QWidget(self.tabWidget)
         tab.setObjectName("tab")
         verticalLayout = QtWidgets.QVBoxLayout(tab)
         verticalLayout.setContentsMargins(0, 0, 0, 0)
         verticalLayout.setSpacing(10)
         verticalLayout.setObjectName("verticalLayout")
         tableView = QtWidgets.QTableView(tab)
-        tableView.setHorizontalHeader(Model.PandaTableHorizontalHeader())
+        tableView.setHorizontalHeader(Model.PandaTableHorizontalHeader(parent=tableView))
         tableView.setSortingEnabled(False)
         tableView.setObjectName("tableView")
         tableView.verticalHeader().setDefaultSectionSize(30)
         tableView.verticalHeader().setMinimumSectionSize(30)
         verticalLayout.addWidget(tableView)
+        panda = Model.PandasTable(pandaData, parent=tab)
         tableView.setModel(panda)
         self.tabWidget.addTab(tab, "Tab")
 
-    def deleteAllTabs(self):
+    def newEmptyTab(self):
         """
-        Deletes all tabs in the tab bar.
-        """   
+        Creates a new tab without any data and axi labels from 1-100.
+        """
+        pandaData = pd.DataFrame(columns=list(map(str, range(0,100))), index=range(0,100))
+        self.createTab(pandaData)
 
-        while self.tabWidget.count() != 0:
+    def closeTab(self):
+        """
+        Closes the active tab, releases the memory, and deletes the C++ object.
 
-                self.tabWidget.removeTab(self.tabWidget.currentIndex())
+        TODO: Isn't releasing the memory for some reason.
+        """
 
+        self.tabWidget.currentWidget().deleteLater()
+        self.tabWidget.removeTab(self.tabWidget.currentIndex())
     #endregion
 
     #region File Menu
-    def loadData(self):     
+    def loadData(self):
         """
         Prompts the user to select a file to load into view. Deletes all other open tabs upon successful load.
         If an invalid path is given, the user is notified.
         """
 
 
-        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getenv('HOME'), 'CSV(*.csv)')
+        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getcwd(), 'CSV(*.csv)')
 
         # If a file was specified, load it up. If not, tell the user to pick a valid file
         if path[0] != '':
 
             if os.path.exists(path[0]) and os.path.getsize(path[0]):
 
-                fileData = pd.read_csv(path[0], index_col=None, dtype=object)
+                filepath, filename = os.path.split(path[0])
+                pandaData = procedures.load(filename, filepath)
 
-                panda = Model.PandasTable(fileData)
-
-                self.deleteAllTabs()
-                self.createTab(panda)
+                while self.tabWidget.count() != 0:
+                    self.closeTab()
+                self.createTab(pandaData)
 
             else:
                 self.notifyUser("Please pick a valid file.")
@@ -228,18 +238,17 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         """
 
 
-        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getenv('HOME'), 'CSV(*.csv)')
+        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getcwd(), 'CSV(*.csv)')
 
         # If a file was specified, load it up. If not, tell the user to pick a valid file
-        if path[0] != None:
+        if path[0] != '':
 
             if os.path.exists(path[0]) and os.path.getsize(path[0]):
 
-                self.OriginalData = pd.read_csv(path[0], index_col=None, dtype=object)
+                filepath, filename = os.path.split(path[0])
+                pandaData = procedures.load(filename, filepath)
 
-                panda = Model.PandasTable(self.OriginalData)
-
-                self.createTab(panda)
+                self.createTab(pandaData)
 
             else:
                 self.notifyUser("Please pick a valid file.")
@@ -253,7 +262,11 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
         path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', os.getenv('$HOME'))
 
-        self.getCurrentPanda().saveData(path)
+        if path[0] != '':
+    
+            if os.path.exists(path[0]) and os.path.getsize(path[0]):
+
+                self.getCurrentPanda().saveData(path[0])
 
     def Exit(self):
         """

@@ -1,5 +1,5 @@
 """
-datatool - to make cleaning data easier and faster,
+Fully automated cleaning of exports from softwares.
 
 Created by: Scott Walton
 """
@@ -16,7 +16,7 @@ import pandas as pd
 import procedures
 
 #region Software Exports
-def ASF_fix(path=os.getcwd(), key="ASF ACCT#", **kwargs):
+def ASF_fix(path=os.getcwd(), key="ASF ACCT#"):
 
 
     path = path + '/*.CSV'
@@ -95,10 +95,10 @@ def ASF_fix(path=os.getcwd(), key="ASF ACCT#", **kwargs):
 
     return complete.to_csv('complete.csv', quoting=1)
 
-def KS_fix(path_to_files=os.getcwd(), key='Id', **kwargs):
+def KS_fix(path=os.getcwd(), key='Id'):
 
 
-    path = path_to_files + '/*.csv'
+    path = path + '/*.csv'
     files = glob.glob(path)
 
     for i in files:
@@ -264,27 +264,46 @@ def KS_fix(path_to_files=os.getcwd(), key='Id', **kwargs):
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
 
-def MS_fix(holder="students", path_to_files=os.getcwd(), **kwargs):
+def MS_fix(path=os.getcwd(), holder="students"):
+    """
+    Fully automated cleaning of exports from Member Solutions.
 
-    path = path_to_files + '/*.csv'
+    Note: This is the most well done fix and should be used as an example.
+    """
+
+    #region Load Files
+
+    path = path + '/*.csv'
     files = glob.glob(path)
 
+    # This prevents errors about undefined variables
+    # only done to files that are not 100% necessary
+    notes= pd.DataFrame()
+    bill_payers = pd.DataFrame()
+
     for i in files:
-        if "accounts" in i:
-            students = pd.read_csv(i, index_col=None, dtype=object)
 
-        if "notes" in i:
-            notes = pd.read_csv(i, index_col=None, dtype=object)
+        filepath, filename = os.path.split(i)
 
-        if "payments" in i:
-            payments = pd.read_csv(i, index_col=None, dtype=object)
+        if "mms accounts" in filename:
+            bill_payers = procedures.load(filename, filepath)
+            print('Found Bill Payers file -- ' + filename)
 
-    ### Students ###
+        elif "accounts" in filename:
+            students = procedures.load(filename, filepath)
+            print('Found Students file -- ' + filename)
+
+        elif "notes" in filename:
+            notes = procedures.load(filename, filepath)
+            print('Found Notes file -- ' + filename)
+    
+    #endregion
+
+    #region Students
 
     # Drop columns we can't use
-
     students.drop([ 'A/R start date','A/R # of payments','A/R cancellation notice',
-                    'A/R payment amount', 'Cancel Notice', 'original_payment_term',
+                    'A/R payment amount', 'original_payment_term',
                     'sales_tax','down_payment', 'transfer amount', 'service_charge',
                     'outstanding_balance', 'balance', 'cash_price', 'first_payment_due'], axis=1, inplace=True)
 
@@ -292,9 +311,7 @@ def MS_fix(holder="students", path_to_files=os.getcwd(), **kwargs):
     students = procedures.tidy_split(students, sep='; ')
 
     # Removes all non-numeric characters from phone columns
-    procedures.clean_phones(students, 'home phone')
-    procedures.clean_phones(students, 'work phone')
-    procedures.clean_phones(students, 'cell phone')
+    procedures.clean_phones(students, ['home phone', 'work phone', 'cell phone'])
 
     # Rename columns for clarity
     students.rename(columns={'Cycle Frequency': 'Payment Frequency', 'eft type': 'C or S',
@@ -307,18 +324,6 @@ def MS_fix(holder="students", path_to_files=os.getcwd(), **kwargs):
     # Translate ACH account type to be importable
     students['C or S'].replace('Checking Debit', 'C', inplace=True)
 
-    # Fill ongoing until cancellation members' expiration dates with 12/31/99
-    students['service_expiration'] = np.where((students['Account Type'] == 'Ongoing') & (students['service_expiration'].isnull()),
-                                                '12/31/2099', students['service_expiration'])
-
-    # Get most recent membership group
-    students['Acc#'], students['Mem#'] = students['MSIAccount#'].str.split('-', 1).str
-    students['Mem#'] = pd.to_numeric(students['Mem#'])
-    studentsMax = students.sort_values('Mem#', ascending=False).groupby('Acc#').head(1)
-
-    # Drops all but most recent membership group
-    students = students[students['MSIAccount#'].isin(studentsMax['MSIAccount#'])]
-
     # Translate contact types to be importable
     students['Account Status'].replace({'Active': 'S', 'Returned': 'F', 'Default': 'F' ,
                                         'Inactive': 'I', 'Complimentary': 'O'}, inplace=True)
@@ -326,6 +331,17 @@ def MS_fix(holder="students", path_to_files=os.getcwd(), **kwargs):
     # Translate payment methods to be importable
     students['Payment Method'].replace({'Visa': 'CC', 'Discover': 'CC', 'Mastercard': 'CC',
                                         'Statement': 'In House', 'AMEX': 'CC'}, inplace=True)
+
+    # Fill ongoing until cancellation members' expiration dates with 12/31/99
+    students['service_expiration'] = np.where((students['Account Type'] == 'Ongoing') & \
+            (students['service_expiration'].isnull()), '12/31/2099', students['service_expiration'])
+
+    # Get most recent membership group and drop the rest
+    students['Acc#'], students['Mem#'] = students['MSIAccount#'].str.split('-', 1).str
+    students['Mem#'] = pd.to_numeric(students['Mem#'])
+    studentsMax = students.sort_values('Mem#', ascending=False).groupby('Acc#').head(1)
+    students = students[students['MSIAccount#'].isin(studentsMax['MSIAccount#'])]
+
     # Create Billing Company column based on payment methods
     students['Billing Company'] = np.where(students['Payment Method'] == 'CC', 'autoCharge',
                                         np.where(students['Payment Method'] == 'EFT', 'autoCharge',
@@ -346,12 +362,13 @@ def MS_fix(holder="students", path_to_files=os.getcwd(), **kwargs):
 
     # If we are using the Students as membership holders:
     if holder == 'students':
+
+
         students['parent?'] = ''
         for i, row in students.iterrows():
 
             # Check for Parents who are also Students
             if row['Parent Last Name'].upper() in row['Members'].upper() and row['Parent First Name'].upper() in row['Members'].upper():
-                print('Found Parent -- ' + row['Members'])
                 students.at[i, 'parent?'] = True
 
         membershipHolders = pd.DataFrame()
@@ -379,45 +396,84 @@ def MS_fix(holder="students", path_to_files=os.getcwd(), **kwargs):
         # Combine the two groups back together
         students = membershipHolders.append(membershipParticipants, sort=False)
 
-    ### Payments ###
+    # If they'd prefer to have parents as Other contacts holding the memberships:
+    elif holders == 'parents':
+        # Nobody has asked for just yet.
+        pass
 
-    ### Notes ###
+    #endregion
 
-    # Drops empty notes
-    notes = notes[notes['Remarks/Amount'].notnull()]
+    #region Bill Payers
+    if not bill_payers.empty:
 
-    # Strips whitespace
-    notes['Remarks/Amount'] = notes['Remarks/Amount'].str.strip()
+        # For mergability
+        bill_payers['MSIAccount#'] = bill_payers['MSICustomerID'] + '-' + bill_payers['MSISubID']
 
-    # Merges all account notes into one line, for importability
-    notes['Acc#'], notes['Mem#'] = notes['MSIAccount#'].str.split('-', 1).str
-    notes = notes.groupby('Acc#').agg({'Remarks/Amount':' -- '.join}).reset_index()
+        # Drop columns that are already present in students file
+        bill_payers.drop(['APSDealerId', 'Customer FName', 'Customer LName',
+        'Customer MI', 'Customer Gender', 'Customer Address Line 1',
+        'Customer Address Line 2', 'Customer City', 'Customer State',
+        'Customer Zip', 'Customer Home Phone', 'Customer Work Phone',
+        'Customer Cell Phone', 'Customer Email', 'InvoiceID', 'Item Name',
+        'Invoice Order Date', 'Invoice Downpayment', 'Invoice Line Item Price',
+        'Invoice Line Recurring Price', 'MemberID', 'Member FName',
+        'Member LName', 'Member MI', 'dob', 'Member Gender', 'Address Line 1',
+        'Address Line 2', 'City', 'State', 'Zip', 'Member Home Phone',
+        'Member Work Phone', 'Member Cell Phone', 'Member Email',
+        'Membership ID', 'Membership Current Status', 'Membership Begin Date',
+        'Membership End Date', 'Next Payment Due Date', 'Monthly Payment Amount',
+        'Balance', 'Billing Frequency', 'Outstanding Balance', 'Method of Payment',
+        'Total Paid', 'Account Type', 'Account Status', 'Auto renewal',
+        'Auto Renewal Term', 'Auto Renewal Date', 'A/R cancellation notice',
+        'Auto Renewal Balance', 'Auto Renewal Type', 'CC#', 'CC exp date',
+        'routing_number', 'eft account', 'eft type', 'MSICustomerID',
+        'MSISubID'], axis=1, inplace=True)
+    #endregion
 
-    ### Merge files ###
+    #region Notes
+    if not notes.empty:
+        # Drops empty notes
+        notes = notes[notes['Remarks/Amount'].notnull()]
+
+        # Strips whitespace
+        notes['Remarks/Amount'] = notes['Remarks/Amount'].str.strip()
+
+        # Merges all account notes into one line, for importability
+        notes['Acc#'], notes['Mem#'] = notes['MSIAccount#'].str.split('-', 1).str
+        notes = notes.groupby('Acc#').agg({'Remarks/Amount':' -- '.join}).reset_index()
+    #endregion
+
+    #region Merge
 
     complete = students
-    complete = complete.merge(notes, on='Acc#', how='left')
+    if not notes.empty:
+        complete = complete.merge(notes, on='Acc#', how='left')
+    if not bill_payers.empty:
+        complete = complete.merge(bill_payers, on="MSIAccount#", how='left')
 
+    #endregion
 
-    ### Output files ###
+    #region Output Files
 
     try:
         os.mkdir('clean')
-    except Exception:
+    except OSError:
         pass
 
     students.name = 'Contacts'
+    bill_payers.name = 'Bill_Payers'
     notes.name = 'Notes'
-    payments.name = 'Payments'
     complete.name = 'Complete'
 
-    for i in [students, notes, payments, complete]:
+    for i in [students, notes, complete, bill_payers]:
+        if not i.empty:
+            i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
+    print('Succesfully cleaned MemberSolutions export!')
+    #endregion
 
-        i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
+def MB_fix(path=os.getcwd(), key='MBSystemID'):
 
-def MB_fix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
-
-    path = path_to_files + '/*.csv'
+    path = path + '/*.csv'
     files = glob.glob(path)
 
 
@@ -662,10 +718,10 @@ def MB_fix(path_to_files=os.getcwd(), key='MBSystemID', **kwargs):
 
     print('\a')
 
-def PM_fix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
+def PM_fix(path=os.getcwd(), key='RecordName'):
 
 
-    path = path_to_files + '/*.csv'
+    path = path + '/*.csv'
     files = glob.glob(path)
 
 
@@ -907,10 +963,10 @@ def RM_fix(df, parents=None):
 
     df.to_csv('clean_' + 'RM' + '.csv', index=False, quoting=1)
 
-def ZP_fix(path_to_files=os.getcwd(), key='RecordName', **kwargs):
+def ZP_fix(path=os.getcwd(), key='RecordName'):
 
 
-    path = path_to_files + '/*.csv'
+    path = path + '/*.csv'
     files = glob.glob(path)
 
 
