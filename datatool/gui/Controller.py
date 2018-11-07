@@ -25,9 +25,8 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.setupUi(self)
 
         if filename != None:
-            data = procedures.load(filename, path)
-            panda = Model.PandasTable(data)
-            self.createTab(panda)
+            pandaData = procedures.load(filename, path)
+            self.createTab(pandaData)
         else:
             self.newEmptyTab()
 
@@ -260,11 +259,13 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         """
 
 
-        path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', os.getenv('$HOME'))
+        path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', os.getcwd())
 
         if path[0] != '':
     
-            if os.path.exists(path[0]) and os.path.getsize(path[0]):
+            filepath, filename = os.path.split(path[0])
+
+            if os.path.exists(filepath):
 
                 self.getCurrentPanda().saveData(path[0])
 
@@ -342,7 +343,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         selectionModel = self.getCurrentView().selectionModel()
 
         # Pass to panda
-        self.getCurrentPanda().findAndReplace(findText, replaceText, selectionModel, self)
+        self.getCurrentPanda().findAndReplace(findText, replaceText, selectionModel)
 
     #endregion
 
