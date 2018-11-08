@@ -19,9 +19,9 @@ def test_fix_ranks_commas():
 
     assert result.at[1, 'Shav Tata'] == 'Red Belt'
 
-def test_clean_phones():
+def test_remove_non_numeric():
     test_data = datatool.procedures.load("test_data", 'tests/test_files')
-    result = datatool.procedures.clean_phones(test_data, 'Phones')
+    result = datatool.procedures.remove_non_numeric(test_data, 'Phones')
 
     assert result.at[0, 'Phones'] == '9543600101'
 
