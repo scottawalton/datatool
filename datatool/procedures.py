@@ -148,11 +148,11 @@ def split_phones(df, column):
     df['Mobile'] = df['Mobile'].combine_first(df['Mobile_'])
     df['Mobile 2'] = df['Mobile 2'].combine_first(df['Mobile 2_'])
     df['Mobile 3'] = df['Mobile 3'].combine_first(df['Mobile 3_'])
-    df = df.drop([column, 'Mobile_', 'Mobile 2_', 'Mobile 3_'], axis=1)
-    df = clean_phones(df, ['Mobile', 'Mobile 2', 'Mobile 3', 'Work', 'Home'])
+    df.drop([column, 'Mobile_', 'Mobile 2_', 'Mobile 3_'], axis=1, inplace=True)
+    df = remove_non_numeric(df, ['Mobile', 'Mobile 2', 'Mobile 3', 'Work', 'Home'])
     return df
 
-def clean_phones(df, column='Phone'):
+def remove_non_numeric(df, column='Phone'):
     """
     Removes everything but numeric characters from phone column.
         :param df:
@@ -204,10 +204,12 @@ def fix_dates(df, column=None):
         for x in column:
             df[x] = pd.to_datetime(df[x])
             df[x] = df[x].dt.strftime('%m-%d-%Y')
+            df[x].replace('NaT', np.nan, inplace=True)
         return df
     else:
         df[column] = pd.to_datetime(df[column])
         df[column] = df[column].dt.strftime('%m-%d-%Y')
+        df[column].replace('NaT', np.nan, inplace=True)
         return df
 
 def strip_whitespace(df, column=None):

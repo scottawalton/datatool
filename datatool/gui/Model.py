@@ -231,7 +231,7 @@ class PandasTable(QtCore.QAbstractTableModel):
 
         # If columns are selected, do the operation on each of them, 
         if selection[0] != None:
-            procedures.clean_phones(self.df, selection[0])
+            procedures.remove_non_numeric(self.df, selection[0])
             self.appendState()
         # otherwise: let the user know they need to select a column
         else:
