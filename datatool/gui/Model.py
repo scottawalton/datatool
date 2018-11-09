@@ -1,9 +1,12 @@
-
-from PyQt5 import QtCore, QtWidgets, QtGui
 import os
 import sys
+import random
+import string
+
 import pandas as pd
 import numpy as np
+from PyQt5 import QtCore, QtWidgets, QtGui
+
 import procedures
 
 class PandasTable(QtCore.QAbstractTableModel):
@@ -200,6 +203,39 @@ class PandasTable(QtCore.QAbstractTableModel):
             return None, rowIndexes
         else:
             return None, None
+
+    def insertBlank(self, selectionModel):
+        """
+        Inserts a blank row/column based on current selection.
+        """
+
+        columns, rows = self.translateSelection(selectionModel)
+
+        if rows != None:
+            rowMaxIndex = max(rows) + .5
+            row = pd.DataFrame(columns=self.df.columns.values, index=[rowMaxIndex])
+            self.df = self.df.append(row, ignore_index=False)
+            self.df = self.df.sort_index().reset_index(drop=True)
+        
+        if columns != None:
+            if len(columns) > 1:
+                colMaxIndex = 0
+                for x in columns:
+                    val = int(((self.df.columns == x).nonzero())[0][0])
+                    if val > colMaxIndex:
+                        colMaxIndex = val
+            else:
+                colMaxIndex = int(((self.df.columns == columns[0]).nonzero())[0][0])
+
+            try:
+                colName = str(random.choice(string.ascii_letters)) 
+                self.df.insert(loc=colMaxIndex + 1, value=pd.Series(), column=colName)
+            except ValueError:
+                colName = str(random.choice(string.ascii_letters.pop(colName))) 
+                self.df.insert(loc=colMaxIndex + 1, value=pd.Series(), column=colName)
+
+            self.layoutChanged.emit()
+
 
     def clearWhitespace(self, selectionModel):
         """

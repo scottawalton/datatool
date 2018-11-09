@@ -1,13 +1,15 @@
-from PyQt5 import QtCore, QtWidgets, QtGui
-from gui.Ui_View import Ui_DataTool
 import os
 import sys
-import pandas as pd
-from gui import Model
-import numpy as np
-import procedures
 import re
 import traceback
+
+import pandas as pd
+import numpy as np
+from PyQt5 import QtCore, QtWidgets, QtGui
+
+import procedures
+from gui.Ui_View import Ui_DataTool
+from gui import Model
 
 class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
     """
@@ -42,6 +44,8 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.actionDelete.triggered.connect(self.deleteData)
         self.actionUndo.triggered.connect(self.undo)
         self.actionRedo.triggered.connect(self.redo)
+        self.actionAdd_Row.triggered.connect(self.insertBlank)
+        self.actionAdd_Column.triggered.connect(self.insertBlank)
 
         # Operations Menu Actions
         self.actionClear_Whitespace.triggered.connect(self.clearWhitespace)
@@ -49,6 +53,9 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.actionCorrect_Date_Format.triggered.connect(self.correctDateFormat)
         self.actionDisperse_Ranks_By_Program.triggered.connect(self.ranksByProgram)
         self.actionFind_and_Replace.triggered.connect(self.findAndReplace)
+
+        # View Menu Actions
+        self.actionDisplay_Command_Prompt.triggered.connect(self.toggleCommandPrompt)
 
         # Run button
         self.runButton.clicked.connect(self.runCommand)
@@ -106,6 +113,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         msg = QtWidgets.QMessageBox(self)
         msg.setText(message)
         msg.exec_()
+    
 
     #region Tab Functionality
     def getCurrentView(self):
@@ -287,6 +295,13 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         # Pass it to the panda model to deal with
         self.getCurrentPanda().deleteData(selectionModel)
 
+    def insertBlank(self):
+
+        # A selection model to get the current selection
+        selectionModel = self.getCurrentView().selectionModel()
+
+        # Pass it to the panda model to deal with
+        self.getCurrentPanda().insertBlank(selectionModel)
     #endregion
 
     #region Operations Menu
@@ -345,6 +360,16 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         # Pass to panda
         self.getCurrentPanda().findAndReplace(findText, replaceText, selectionModel)
 
+    #endregion
+
+    #region View Menu
+    def toggleCommandPrompt(self):
+        if self.textEdit.isVisible():
+            self.textEdit.hide()
+            self.runButton.hide()
+        else:
+            self.textEdit.show()
+            self.runButton.show()
     #endregion
 
 if __name__ == "__main__":
