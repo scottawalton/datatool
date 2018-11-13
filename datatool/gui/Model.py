@@ -77,7 +77,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             col = index.column()
             row = index.row()
             try:
-                self.df.iloc[row][col] = value
+                self.df.iat[row, col] = value
                 self.dataChanged.emit(index, index)
                 self.appendState()
                 return True

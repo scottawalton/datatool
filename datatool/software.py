@@ -96,11 +96,20 @@ def ASF_fix(path=os.getcwd(), key="ASF ACCT#"):
     return complete.to_csv('complete.csv', quoting=1)
 
 def KS_fix(path=os.getcwd()):
+    """
+    Fully automated cleaning of exports from KickSite.
+    """
 
     #region Load Files
 
     path = path + '/*.csv'
     files = glob.glob(path)
+
+    # Files that are not 100% necessary can be empty until assignment
+    prospects = pd.DataFrame()
+    inactive = pd.DataFrame()
+    frozen = pd.DataFrame()
+    billing = pd.DataFrame()
 
     for i in files:
 
@@ -218,6 +227,8 @@ def KS_fix(path=os.getcwd()):
 
         billing = billing.sort_values('Status').drop_duplicates(subset=['Members'],keep='first')
 
+        billing['End date'] = np.where((billing['End date'].isnull()) & (billing['Start date'].notnull()), '12-31-2099', billing['End date'])
+
         billing.drop(['Inactivated Date','Auto Inactivated', 'Consecutive Declines',
             'Last Declined Date', 'Days until next charge', 'Billable first name',
             'Billable last name', 'Family'], axis=1, inplace=True)
@@ -229,7 +240,8 @@ def KS_fix(path=os.getcwd()):
     complete = active.copy()
 
     complete['Members'] = complete['First Name'] + (" " + complete['Last Name'] if len(complete['Last Name']) != 0 else "")
-    complete = complete.merge(billing, on='Members', how='left')
+    if not billing.empty:
+        complete = complete.merge(billing, on='Members', how='left')
 
     #endregion
 
@@ -849,108 +861,79 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
 
 def RM_fix(df, parents=None):
+    """
+    Fully automated cleaning of exports from Rainmaker.
+    """
 
-    # Fix Billing Companys and Payment Methods
+    #region Clean for Importability
 
-    replacements = {'ON HOLD': 'autoCharge','autoCollect': 'autoCharge',
-                    'Family Membership': 'Family Membership', 'In House': 'In House',
-                    'PIF': 'PIF', 'autoCollect_ONHOLD': 'autoCharge'}
-
-    df['Billing_Company'] = df['Billing_Company'].map(replacements)
-
-    def fill_null():
-
-        if pmt:
-            df.iloc[index]['Payment_Method'] = 'PIF'
-            if pmt_date:
-                df.iloc[index]['next_payment_due'] = '12/31/2099'
-            if pmt_amt:
-                df.iloc[index]['Tuition_Amount'] = '0'
-            if pmt_freq:
-                df.iloc[index]['PaymentFrequency'] = '0'
-
-    # Fix for Family Memberships
-
-    for index, x in df['Billing_Company'].iteritems():
-
-        # Find all relevant null values
-
-        pmt = pd.isnull(df.iloc[index]['Payment_Method'])
-        pmt_date = pd.isnull(df.iloc[index]['next_payment_due'])
-        pmt_amt = pd.isnull(df.iloc[index]['Tuition_Amount'])
-        pmt_freq = pd.isnull(df.iloc[index]['PaymentFrequency'])
-        strt_date = pd.isnull(df.iloc[index]['Current_Program_Start_Date'])
-
-        if x == 'Family Membership':
-
-            df.iloc[index]['Billing_Company'] = 'PIF'
-            x = 'PIF'
-
-            if strt_date:
-
-                # Matches Start Date with owner of Family Membership
-
-                # Check 5 cells below and 5 cells above for Surname, Address, and Program match
-
-                indexRange = [i for i in range(index-5, index+5)]
-                for i in indexRange:
-
-                    match = (df.iloc[i]['Address_1'] == df.iloc[index]['Address_1'] and
-                             df.iloc[i]['Last_Name'] == df.iloc[index]['Last_Name'] and
-                             df.iloc[i]['Current_Program'] == df.iloc[index]['Current_Program'] and
-                             df.iloc[i]['Current_Program_Expires'] == df.iloc[index]['Current_Program_Expires'])
-
-
-                    if match:
-                        df.iloc[index]['Current_Program_Start_Date'] = df.iloc[i]['Current_Program_Start_Date']
-                        fill_null()
-
-                    else:
-                        fill_null()
-
-
-        if x == 'PIF':
-
-            fill_null()
-
-
-
-    # Fix Expire Dates before 1/1/2000
-
-    for index, x in df['Current_Program_Expires'].iteritems():
+    # Fix Expire Dates when dates are entered as mm/dd/yy
+    for index, x in df['Current Program Expires'].iteritems():
 
         match = re.match(r'(.*/\d?\d)/(\d)(\d)([\s|$])', str(x))
 
         if match is not None:
+            # If date year's tens place is greater than 4, insert forever
             if int(match.group(2)) >= 5 or x == '1/1/00 0:00':
-                # Correct Date is newDate, but since it would be in the 1900's, insert forever
-                newDate = str(match.group(1)) + "/19" + str(match.group(2)) + str(match.group(3)) + str(match.group(4))
                 forever = "12/31/2099"
-                df.iloc[index]['Current_Program_Expires'] = forever
+                df.at[index, 'Current Program Expires'] = forever
             elif int(match.group(2)) < 5:
                 newDate = str(match.group(1)) + "/20" + str(match.group(2)) + str(match.group(3)) + str(match.group(4))
-                df.iloc[index]['Current_Program_Expires'] = newDate
+                df.at[index, 'Current Program Expires'] = newDate
 
+    df['Contact Type'] = np.where((df['Contact Type'] == 'P') & (df['On Trial'] == 'True'), 'T', df['Contact Type'])
 
-    # Drop extra columns
+    replacements = {'ON HOLD': 'autoCharge','autoCollect': 'autoCharge', 'autoCollect_ONHOLD': 'autoCharge'}
+    df['Billing Company'].replace(replacements, inplace=True)
 
-    df = df.drop(['Age', 'Total_Contract_Amount', 'Down_Payment', 'Total_Financed', 'Number_of_Installments',
-                'First_Payment_Due_Date', 'last_payment_date', 'Date_to_Take_Payment', 'Middle_Init'], axis=1)
+    df['Billing Company'] = np.where((df['Payment Method'] == 'In House') & (df['Billing Company'].isnull()),
+                                         'In House', df['Billing Company'])
+    df['Billing Company'] = np.where((df['Payment Method'] == 'PIF') & (df['Billing Company'].isnull()), 
+                                         'PIF', df['Billing Company'])
 
+    df['Next Payment Due'] = np.where((df['Payment Method'] == 'PIF') & (df['Next Payment Due'].isnull()),
+                                       df['Current Program Expires'], df['Next Payment Due'])
+
+    procedures.remove_non_numeric(df, 'Credit Card Expire')
+
+    # Makes Family Memberships importable
+    df['Tuition Amount'] = np.where((df['Billing Company'] == 'Family Membership') & (df['Tuition Amount'].isnull()), 
+                                         '0', df['Tuition Amount'])
+    df['Payment Method'] = np.where((df['Billing Company'] == 'Family Membership') & (df['Payment Method'].isnull()), 
+                                         'PIF', df['Payment Method'])
+    df['Next Payment Due'] = np.where((df['Billing Company'] == 'Family Membership') & (df['Next Payment Due'].isnull()), 
+                                            df['Current Program Expires'], df['Next Payment Due'])
+    df['Payments Remaining'] = np.where((df['Billing Company'] == 'Family Membership') & (df['Payments Remaining'].isnull()), 
+                                            '0' , df['Payments Remaining'])
+    # Need to assign a Start Date for memberships to be importable
+    needs_start_date = df[(df['Current Program Start Date'].isnull()) & (df['Billing Company'] == 'Family Membership')]
+    for index, row in needs_start_date.iterrows():
+        family = df[(df['Address1'] == row['Address1']) & (df['Last Name'] == row['Last Name']) & 
+                    (df['Current Program'] == row['Current Program']) & (df['Current Program Start Date'].notnull())]
+        value = family.head(1)['Current Program Start Date'].values
+        if isinstance(value, np.ndarray):
+            value = value.tolist()
+            value = value[0] if len(value) > 0 else np.nan
+            df.at[index, 'Current Program Start Date'] = value
+    df['Billing Company'] = np.where(df['Billing Company'] == 'Family Membership', 
+                                         'PIF', df['Billing Company'])
+
+    df = df.drop(['Age', 'Total Contract Amount', 'Down Payment', 'Total Financed', 'Middle Init',
+                'First Payment Due Date', 'Last Payment Date', 'Date To Take Payment', 'On Trial',
+                'Current Rank'], axis=1)
     df.dropna(how='all', axis='columns', inplace=True)
+    #endregion
 
-    # This should have been included -- may need to revise the entire procedure for optmization
-
-    df['Billing_Company'] = np.where((df['Payment_Method'] == 'In House') & (df['Billing_Company'].isnull()), 'In House', df['Billing_Company'])
-    df['Billing_Company'] = np.where((df['Payment_Method'] == 'PIF') & (df['Billing_Company'].isnull()), 'PIF', df['Billing_Company'])
-
-    df.dropna(how='all', inplace=True, axis=1)
-
+    #region Merge
     if isinstance(parents, pd.DataFrame):
-        df = df.merge(parents, on='ID', how='left')
-        df.drop_duplicates(inplace=True)
+        df = df.merge(parents, left_on='Id', right_on='ID', how='left')
+        df.drop('ID', axis=1, inplace=True)
+        df.drop_duplicates(keep='first', inplace=True)
+    #endregion
 
+    #region Output
     df.to_csv('clean_' + 'RM' + '.csv', index=False, quoting=1)
+    #endregion
 
 def ZP_fix(path=os.getcwd()):
     """
@@ -1040,8 +1023,6 @@ def ZP_fix(path=os.getcwd()):
                                     bills['Installments Remaining'].astype(float) + 1,
                                     bills['Installments Remaining'])
 
-    bills['Installments Remaining'] = np.where((bills['Installments Remaining'].isnull()) & (bills['Mbr. Status'] == 'COMPLETED'),
-                                                '0', bills['Installments Remaining'])
 
     bills.drop(['Drop Me', 'Installments', 'Total', 'Paid', 'Description', 'Status', 'Purchase Type', 'Description', 'Notes', 'Subtotal'], inplace=True, axis=1)
     bills.rename(columns={'Due Date': 'Next Payment Due Date'}, inplace=True)
@@ -1081,6 +1062,9 @@ def ZP_fix(path=os.getcwd()):
 
     complete['Next Payment Due Date'] = complete['Next Payment Due Date'].combine_first(complete['First Bill Due'])
     complete['Installments Remaining'] = complete['Installments Remaining'].combine_first(complete['# of Installments'])
+
+    complete['Installments Remaining'] = np.where((complete['Installments Remaining'].isnull()) & (complete['Mbr. Status'] == 'COMPLETED'),
+                                                '0', complete['Installments Remaining'])
 
     complete.drop(['Birth Month','First Bill Due', '# of Installments','Birth Day','Interest (sub)','Referred By','Last Updated','Last Log Entry',
     'Tracking Source','Tracking Name','Tracking Medium','Tracking Keywords', 'Primary Location','Signup Fee?',
