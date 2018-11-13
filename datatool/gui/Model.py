@@ -100,9 +100,16 @@ class PandasTable(QtCore.QAbstractTableModel):
         self.stateStackCurrent = 0
 
     def appendState(self):
-        self.stateStack.append(self.df.copy())
-        self.stateStackCurrent += 1
-    
+        # If a chance is made on a state other than the most recent one,
+        # that state becomes the most recent one.
+        if self.stateStackCurrent == len(self.stateStack) -1:
+            self.stateStack.append(self.df.copy())
+            self.stateStackCurrent += 1
+        else:
+            self.stateStackCurrent += 1
+            self.stateStack = self.stateStack[:self.stateStackCurrent]    
+            self.stateStack.append(self.df.copy())
+
     def backwardState(self):
 
         # This block checks if the latest state is saved.
