@@ -90,7 +90,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
                 self.getCurrentPanda().appendState()
             
             except:
-                errorMsg = 'There was a problem with the command entered. ' + \
+                errorMsg = 'There was a problem with the command entered. \n' + \
                            'See stack trace: \n\n' + traceback.format_exc()
                 self.notifyUser(errorMsg)
 

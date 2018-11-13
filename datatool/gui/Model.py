@@ -120,7 +120,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.layoutChanged.emit()
 
         else:
-            QtWidgets.QMessageBox.about(self.parent, "Notice" , "Already at earliest change." )
+            self.parent.window().notifyUser( "Already at earliest change." )
             self.layoutChanged.emit()
 
     def forwardState(self):
@@ -129,7 +129,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.df = self.stateStack[self.stateStackCurrent].copy()
             self.layoutChanged.emit()
         else:
-            QtWidgets.QMessageBox.about(self.parent, "Notice", "Already at most recent change.")
+            self.parent.window().notifyUser("Already at most recent change.")
 
     #endregion
 
@@ -168,7 +168,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.appendState()
         
         else:
-            QtWidgets.QMessageBox.about(self.parent, "Notice", "No columns or rows selected.")
+            self.parent.window().notifyUser("No columns or rows selected.")
 
     def translateSelection(self, selectionModel):
         """
@@ -271,7 +271,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.appendState()
         # otherwise: let the user know they need to select a column
         else:
-            QtWidgets.QMessageBox.about(self.parent, "Notice", "No column selected.")
+            self.parent.window().notifyUser("No column selected.")
 
         selectionModel.clear()
 
@@ -288,7 +288,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             procedures.fix_dates(self.df, selection[0])
             self.appendState()
         else:
-            QtWidgets.QMessageBox.about(self.parent, "Notice", "No column selected.")
+            self.parent.window().notifyUser("No column selected.")
 
         selectionModel.clear()
     
@@ -304,7 +304,7 @@ class PandasTable(QtCore.QAbstractTableModel):
         """
 
         if ranks == '' or programs == '':
-            QtWidgets.QMessageBox.critical(self.parent, "Notice", "One or more of the selections are invalid.")
+            self.parent.window().notifyUser("One or more of the selections are invalid.")
         
         elif ranks is None or programs is None:
             pass
@@ -336,6 +336,7 @@ class PandasTable(QtCore.QAbstractTableModel):
                 self.df[col] = self.df[col].str.replace(findText, replaceText, regex=True)
             self.appendState()
         else:
+            # TODO: This should all be passed to the Controller. Needs revision.
             reply = QtWidgets.QMessageBox.question(self.parent, 'No Columns Selected', \
                 'There are no selected columns. Would you like to apply this operation to the entire sheet?',
                 QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
@@ -394,6 +395,7 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
     def doneEditing(self):
         """
         Called when the user presses Enter in the QLineEdit
+        Note: is called twice every time because of bug in Qt
         """
 
         self.line.setHidden(True)
@@ -402,11 +404,15 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
         # this is required because of a bug with Qt where
         # the editing finished signal is called twice
         if oldName != newName:
-            self.model().df.rename(columns={oldName: newName}, inplace=True)
-            self.model().appendState()
-            self.model().layoutChanged.emit()
-            self.setCurrentIndex(QtCore.QModelIndex())
-            self.parentWidget().setFocus()
+            # Cannot rename a column to another column's name
+            if not newName in self.model().df.columns.values:
+                self.model().df.rename(columns={oldName: newName}, inplace=True)
+                self.model().appendState()
+                self.model().layoutChanged.emit()
+                self.setCurrentIndex(QtCore.QModelIndex())
+                self.parentWidget().setFocus()
+            else:
+                self.window().notifyUser('Column name already exists.')
  
     def editHeader(self,section):
         """
