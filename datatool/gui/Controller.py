@@ -8,6 +8,7 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 import procedures
+import software
 from gui.Ui_View import Ui_DataTool
 from gui import Model
 
@@ -54,6 +55,8 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.actionDisperse_Ranks_By_Program.triggered.connect(self.ranksByProgram)
         self.actionFind_and_Replace.triggered.connect(self.findAndReplace)
 
+        self.actionKickSite.triggered.connect(self.software_ks)
+
         # View Menu Actions
         self.actionDisplay_Command_Prompt.triggered.connect(self.toggleCommandPrompt)
 
@@ -67,6 +70,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         based on the index of their tab.
 
         You will be notified if the code has any syntax errors via a message box.
+        TODO: Create a new tab when a df outside of current range is specified
         """
 
 
@@ -359,6 +363,24 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
         # Pass to panda
         self.getCurrentPanda().findAndReplace(findText, replaceText, selectionModel)
+
+    #region Software
+
+    def software_ks(self):
+
+        export = QtWidgets.QFileDialog.getOpenFileName(self, 'Select PerfectMind Export File', os.getcwd(), 'XLSX(*.xlsx)')
+
+        path, _ = os.path.splitext(export[0])
+
+        active, billing, fam, complete = software.PM_fix(path=path)
+
+        try:
+            for i in [active, billing, fam, complete]:
+                self.createTab(i)
+        except UnboundLocalError:
+            self.notifyUser("Something went wrong. Are all of the required sheets present?")
+
+    #endregion
 
     #endregion
 

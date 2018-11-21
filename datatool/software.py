@@ -1,5 +1,5 @@
 """
-Fully automated cleaning of exports from softwares.
+Fully automated cleaning of exports from various softwares.
 
 Created by: Scott Walton
 """
@@ -17,17 +17,21 @@ import procedures
 
 #region Software Exports
 def ASF_fix(path=os.getcwd(), key="ASF ACCT#"):
+    """
+    Fully automated cleaning of ASF export files.
+    """
 
+    #region Load Files
 
     path = path + '/*.CSV'
     files = glob.glob(path)
 
-    # Load Files in ------------------------------------------------------------
-
     for i in files:
+
         if "CLC" in i:
             clc = pd.read_csv(i, index_col=None, dtype=object,
                     names = ["CLUB","ASF ACCT#","MBR SEQ #","FIRST NAME","LAST NAME","DOB","ALT / BARCD #"])
+                    
         if "CLM" in i:
             clm = pd.read_csv(i, index_col=None, dtype=object,
                     names = ["CLUB","STATUS CODE","ASF ACCT#","FIRST NAME","LAST NAME",
@@ -38,26 +42,30 @@ def ASF_fix(path=os.getcwd(), key="ASF ACCT#"):
                     "BANK RT#","BANK ACCT#","CHK/SAV","CC#","CC HOLDER NAME","CC EXP","CARD CODE",
                     "NXT NOTICE DTE","EMAIL","ALT/BARCODE #","RENWL CODE","AUTO RNW M2M: X=No - E/O/S=Yes",
                     "RNWL 1ST DUE (0 IF ALRDY RNWD)","PMT FREQ","CELL PHONE","REMARKS","BLANK"])
+
         if "EMR" in i:
             emr = pd.read_csv(i, index_col=None, dtype=object,
                     names = ["ASF ACCT#","LAST NME","FIRST NME","RLTNSHP","HOME PHN","WRK PHN",
                     "LAST NME 2","FIRST NME 2","RLTNSHP 2","HOME PHN 2","WRK PHN 2"])
+
         if "NOT" in i:
             note = pd.read_csv(i, index_col=None, dtype=object,
                     names = ["ASF ACCT#","NOTE DATE","NOTE TIME","N/A","EMPLOYEE","NOTE"])
+
         if "REC" in i:
             rec = pd.read_csv(i, index_col=None, dtype=object,
                     names = ["CLUB","ASF ACCT#","RCRD DTE","STATUS","PMT TERM","NUM PMTS",
                     "PMT AMT","EXP DATE","PMTS MADE","NEXT DUE","INTERVAL","DESCRIPTION","CC/ACCT NUM",
                     "CC EXP","ROUTING","CKG/SVGS ACCT","PT SESS","SEQ NUM"])
 
-    #Clean files up ------------------------------------------------------------
+    #endregion
 
-    #Notes Clean
+    #region Notes
     note['NOTE'] = note['NOTE'].str.strip()
     note = note.groupby('ASF ACCT#').agg({'NOTE':' - '.join}).reset_index()
+    #endregion
 
-    #Main Clean
+    #region Main
     clm = clm.drop(["CLUB", "SLSPRSN", "DWN PMT", "TOTAL BAL","LAST PAID DATE",
     "RNWL # OF MOS","RNWL PMT AMT","RNWL CASH/PIF AMT", "NXT NOTICE DTE",
     "RENWL CODE","AUTO RNW M2M: X=No - E/O/S=Yes","RNWL 1ST DUE (0 IF ALRDY RNWD)",
@@ -67,18 +75,20 @@ def ASF_fix(path=os.getcwd(), key="ASF ACCT#"):
         'I':'CC', 'E': 'EFT', 'F': 'EFT', 'A': 'In House', 'B': 'In House'}
 
     clm['STATUS CODE'] = clm['STATUS CODE'].map(replacements)
+    #endregion
 
-    #Emergency Contacts Clean
+    #region Emergency Contacts
     # Change this to clean all columns vvvvv
     emr['ASF ACCT#'] = emr['ASF ACCT#'].str.strip()
     # Concat all cols to one - Emergency
+    #endregion
 
-    #Memberships Clean
+    #region Memberships
     rec = rec.drop(['CLUB'], axis=1)
     # need info to be copied from main contact, but retain info on this one. right merge
+    #endregion
 
-
-    #Merge files together ------------------------------------------------------
+    #region Merge
 
     needs_merge = [emr, note]
     # CLC is not included because it needs to be merged separatly and then appended
@@ -88,12 +98,14 @@ def ASF_fix(path=os.getcwd(), key="ASF ACCT#"):
         x.set_index("ASF ACCT#")
         complete = pd.merge(complete, x, on=key, how='left')
 
-    print(complete['RLTNSHP 2'])
-
     additional = pd.merge(complete, clc, on="ASF ACCT#", how='right')
     complete = complete.append(additional, sort=False)
 
+    #endregion
+
+    #region Output Files
     return complete.to_csv('complete.csv', quoting=1)
+    #endregion
 
 def KS_fix(path=os.getcwd()):
     """
@@ -263,6 +275,8 @@ def KS_fix(path=os.getcwd()):
     for i in [active, billing, fam, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
+    
+    return active, billing, fam, complete
     #endregion
 
 def MS_fix(path=os.getcwd(), holder="students"):
@@ -398,7 +412,7 @@ def MS_fix(path=os.getcwd(), holder="students"):
         students = membershipHolders.append(membershipParticipants, sort=False)
 
     # If they'd prefer to have parents as Other contacts holding the memberships:
-    elif holders == 'parents':
+    elif holder == 'parents':
         # Nobody has asked for just yet.
         pass
 
@@ -473,37 +487,56 @@ def MS_fix(path=os.getcwd(), holder="students"):
     #endregion
 
 def MB_fix(path=os.getcwd(), key='MBSystemID'):
+    """
+    Fully automated cleaning of MindBody's paid export.
+    Needs expansion to handle the free one.
+    """
 
+    #region Load Files
     path = path + '/*.csv'
     files = glob.glob(path)
 
+    # This prevents errors about undefined variables
+    # only done to files that are not 100% necessary
+    notes = pd.DataFrame()
+    ranks = pd.DataFrame()
+    cus = pd.DataFrame()
 
     for i in files:
 
-        if "Clients" in i:
-            con = pd.read_csv(i, index_col=None, dtype=object)
+        filepath, filename = os.path.split(i)
 
-        if "Notes" in i:
-            notes = pd.read_csv(i, index_col=None, dtype=object)
+        if "Clients" in filename:
+            con = procedures.load(filename, filepath)
+            print('Found Clients file -- ' + filename)
 
-        if "CreditCards" in i:
-            fin = pd.read_csv(i, index_col=None, dtype=object)
+        if "Notes" in filename:
+            notes = procedures.load(filename, filepath)
+            print('Found Notes file -- ' + filename)
 
-        if "ClientRelationships" in i:
-            rel = pd.read_csv(i, index_col=None, dtype=object)
+        if "CreditCards" in filename:
+            fin = procedures.load(filename, filepath)
+            print('Found Credit Cards file -- ' + filename)
 
-        if "ClientAutopayContract" in i:
-            mem = pd.read_csv(i, index_col=None, dtype=object)
+        if "ClientRelationships" in filename:
+            rel = procedures.load(filename, filepath)
+            print('Found Client Relationships file -- ' + filename)
 
-        if 'CustomFields' in i:
-            cus = pd.read_csv(i, index_col=None, dtype=object)
+        if "ClientAutopayContract" in filename:
+            mem = procedures.load(filename, filepath)
+            print('Found Client Autopay Contract file -- ' + filename)
 
-        if 'ClientIndexes' in i:
-            ind = pd.read_csv(i, index_col=None, dtype=object)
+        if "CustomFields" in filename:
+            cus = procedures.load(filename, filepath)
+            print('Found Custom Fields file -- ' + filename)
 
+        if "ClientIndexes" in filename:
+            ind = procedures.load(filename, filepath)
+            print('Found Ranks file -- ' + filename)
 
-    # Drop columns we can't use
+    #endregion
 
+    #region Contacts
     con.drop(['SpiritName', 'Dear', 'ForeignZip', 'Pager', 'FaxNumber',
      'CurrentSeries', 'BrochRequest', 'Parent', 'Location',
      'LoginName', 'Password', 'FirstClass', 'IPaddress','wspending', 'VerificationInfo',
@@ -522,36 +555,37 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
      'ModifiedBy','Modified','PasswordChangeKey','EmailStatus','ConvertedDate', 'QBOID', 'HomeStudio', 'Height',
      'Bust','Waist','Hip','Girth','Inseam','Head','Shoe','Tights', 'BirthdayEmailSent', 'SourceID', 'LastClass'], axis=1, inplace=True)
 
+    con.rename(columns={'Male': 'Gender', 'ReferredBy': 'Source'}, inplace=True)
+    con['Gender'] = con['Gender'].map({'True':'M', 'False': 'F'})
+    #endregion
+
+    #region Financials
     fin.drop(['BillingStreetAddress','BillingCity','BillingState','BillingZip', 'BarcodeID'], axis=1, inplace=True)
 
+    fin.rename(columns={'ClientID': 'MBSystemID'}, inplace=True)
+    fin['IsSavingsAcct'] = fin['IsSavingsAcct'].map({'True':'S', 'False': 'C'})
+    #endregion
+
+    #region Contact Relationships
     rel.drop(['RelationID','BarcodeID1', 'BarcodeID2'], axis=1, inplace=True)
 
-    mem.drop(['PayerBarcodeID','PayerLastName','PayerFirstName', 'TerminationDate',
-    'RunDateTime', 'Contract Agreement Date', 'LocationName', 'AutoPayItemDescription'], axis=1, inplace=True)
+    rel.rename(columns={'MBSystemID1': 'MBSystemID'}, inplace=True)
+    rel['Relationships'] = rel['RelName1'] + ': ' + rel['FirstName2'] + ' ' + rel['LastName2']
+    rel = rel.groupby('MBSystemID').agg({'Relationships':' -- '.join}).reset_index()
+    #endregion
 
+    #region Custom Fields
     cus.drop(['FirstName', 'LastName', 'BarcodeID'], axis=1, inplace=True)
-
-    notes.drop(['FirstName', 'LastName'], axis=1, inplace=True)
-
-
-
-    # Clean Up
-
-    ind = ind[ind['IndexName'].str.contains('Belt')]
-
-    ind.drop(['BarcodeID', 'FirstName','LastName'], axis=1, inplace=True)
-
-    ind = ind[ind['IndexValue'].str.contains('Yes')]
-
-    # Custom Fields clean up
-
     procedures.fix_ranks(cus, ranks='CustomFieldValue', programs='CustomField')
     for i in cus['CustomField'].unique().tolist():
         cus = cus.groupby('MBSystemID', as_index=False).sum()
-
     cus.drop(['CustomFieldValue','CustomField', 'BarcodeID','FirstName','LastName'], axis=1, inplace=True, errors='ignore')
+    #endregion
 
-    # Membership file cleanup
+    #region Memberships
+    mem.drop(['PayerBarcodeID','PayerLastName','PayerFirstName', 'TerminationDate',
+    'RunDateTime', 'Contract Agreement Date', 'LocationName', 'AutoPayItemDescription'], axis=1, inplace=True)
+
     cols = mem.columns.values
     mem['ScheduleDate'] = pd.to_datetime(mem['ScheduleDate'])
 
@@ -632,37 +666,38 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
     mem['Contract Start Date'] = pd.to_datetime(mem['Contract Start Date'])
     mem = mem.sort_values('Contract Start Date', ascending=False).groupby('MBSystemID').head(1)
 
-    # Clean Contacts up
+    #endregion
 
-    con.rename(columns={'Male': 'Gender'}, inplace=True)
-    con['Gender'] = con['Gender'].map({'True':'M', 'False': 'F'})
-
-    con.rename(columns={'ReferredBy': 'Source'}, inplace=True)
-
-    # Clean notes up
-
+    #region Notes
+    notes.drop(['FirstName', 'LastName'], axis=1, inplace=True)
     notes.dropna(subset=['Notes'], inplace=True)
     notes = notes.groupby('MBSystemID').agg({'Notes':' - '.join}).reset_index()
     procedures.strip_whitespace(notes, column='Notes')
-    # Financials cleanup
+    #endregion
 
-    fin.rename(columns={'ClientID': 'MBSystemID'}, inplace=True)
-    fin['IsSavingsAcct'] = fin['IsSavingsAcct'].map({'True':'S', 'False': 'C'})
+    #region Ranks
+    # Indexes is how MindBody handles tags. It is also their solution to Ranks.
 
-    # Relationships cleanup
+    ind.drop(['BarcodeID', 'FirstName','LastName'], axis=1, inplace=True)
+    ind = ind[ind['IndexName'].str.contains('Belt')]
+    ind = ind[ind['IndexValue'].str.contains('Yes')]
+    #endregion
 
-    rel.rename(columns={'MBSystemID1': 'MBSystemID'}, inplace=True)
-    rel['Relationships'] = rel['RelName1'] + ': ' + rel['FirstName2'] + ' ' + rel['LastName2']
-    rel = rel.groupby('MBSystemID').agg({'Relationships':' -- '.join}).reset_index()
-
-
-    # Merge files
+    #region Merge
 
     needs_merge = [mem, fin, rel, notes, cus, ind]
     complete = con
 
     for i in needs_merge:
         complete = pd.merge(complete, i, on='MBSystemID', how='left')
+
+    #endregion
+
+    #region Complete File
+    """
+    I can most likely revise this into the respective subcategories.
+    For the time being, this is simplest and is the most readable.
+    """
 
     # Drops empty columns
     complete.dropna(how='all', axis='columns', inplace=True)
@@ -695,7 +730,9 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
     complete['Payment Frequency'] = np.where(complete['PaymentMethod'].notnull(), '30', '')
     complete.drop_duplicates(inplace=True)
 
-    # Output files
+    #endregion
+
+    #region Output Files
 
     try:
         os.mkdir('clean')
@@ -715,42 +752,45 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
 
-    # An alert to let you know when it is finished (because it takes forever)
+    #endregion
 
+    # An alert to let you know when it is finished (because it takes forever)
     print('\a')
 
 def PM_fix(path=os.getcwd(), key='RecordName'):
+    """
+    Fully automated cleaning of PerfectMind's paid export files.
+    Needs expansion to handle the free version.
+    """
 
+    #region Load FIles
 
     path = path + '/*.csv'
     files = glob.glob(path)
 
-
     for i in files:
-        if "Contacts" in i:
-            con = pd.read_csv(i, index_col=None, dtype=object)
-            con.name = 'Contacts'
 
-        if "Finance" in i:
-            fin = pd.read_csv(i, index_col=None, dtype=object)
-            fin.name = 'Financials'
+        filepath, filename = os.path.split(i)
 
-        if "Promotions" in i:
-            ranks = pd.read_csv(i, index_col=None, dtype=object)
-            ranks.name = 'Ranks'
+        if "Contacts" in filename:
+            con = procedures.load(filename, filepath)
+            print('Found Contacts file -- ' + filename)
 
-        if "Trans" in i:
-            mem = pd.read_csv(i, index_col=None, dtype=object)
-            mem.name = 'Memberships'
+        if "Finance" in filename:
+            fin = procedures.load(filename, index_col, filepath)
+            print('Found Financials file -- ' + filename)
 
+        if "Promotions" in filename:
+            ranks = procedures.load(filename, index_col, filepath)
+            print('Found Ranks file -- ' + filename)
 
-    # Rename for merge
+        if "Trans" in filename:
+            mem = procedures.load(filename, index_col, filepath)
+            print('Found Memberships file -- ' + filename)
 
-    ranks.rename(columns={'ContactId': 'RecordName'}, inplace=True)
-    mem.rename(columns={'ContactRecord': 'RecordName'}, inplace=True)
-    mem.rename(columns={'PaymentPattern': 'Frequency', 'Processor': 'Billing Company'}, inplace=True)
+    #endregion
 
-    # Drop columns we can' use
+    #region Contacts
 
     con.drop(['LeadLeadAge', 'MissedPayment', 'FullNameSimple', 'BecameClient', 'BecameFormerClient',
     'ContactedDate', 'Featured', 'StripesAwarded', 'ClassesSinceLastExam', 'PointstoBlackBelt',
@@ -758,19 +798,6 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     'Rating', 'ImportId', 'Description','EnrollmentDate', 'CancelledDate','AltId','LastExam'
     'Call2Date','Call2Completed','Call4Date','Call4Completed','Call6Date','Call6Completed','MembershipExpiry',
     'LeadRating','LeadStatus','LastPromotion','Transferredto','LastExam','Call2Date'], axis=1, inplace=True, errors='ignore')
-
-    ranks.drop(['PromotionId', 'ClassesAttended', 'NextRankPromotionDate', 'IsRankReady', 'ClassesSinceLastRankPromotion', 'CurrentStripe',
-    'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder', 'FullNameSimple'], axis=1, inplace=True, errors='ignore')
-
-    fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber','Student Last Name','Student First Name'], axis=1, inplace=True, errors='ignore')
-
-    mem.drop(['Finance Info Record', 'Transaction Record', 'TotalAmount', 'RemainingBalance', 'DelinquentAmount',
-    'OnHold', 'FirstPayment', 'FinalPayment', 'Ongoing', 'SubTotal', 'TAXONE', 'Tax', 'DelinquentSince',
-    'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays', 'LastName',
-    'FirstName', 'NextPaymentAmount', 'CancellationDate','Notes'], axis=1, inplace=True, errors='ignore')
-
-
-    # clean contacts
 
     con['Type'].replace({'Lead': 'P', 'Former student':"F", 'Active student': 'S'}, inplace=True)
     con['PrimaryPhone'].replace({'Primary Phone': 'Mobile', 'Home ': 'Home'}, inplace=True)
@@ -784,26 +811,15 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
 
     con['Source'] = np.where((con['Source'].isnull()) & (con['ReferedBy'].notnull()), 'Referral', con['Source'])
 
+    #endregion
 
-    # clean up financials // sort down to most recent & reliable card, keep only that ContactRecord
+    #region Ranks
 
-    numcols = ['CreditCardNumber', 'ExpiryMonth', 'ExpiryYear', 'AccountNumber', 'RoutingNumber']
-
-    for i in numcols:
-        fin[i] = fin[i].str.replace(r'[^0-9]', '')
-        fin[i].replace('', np.nan, inplace=True)
-
-    fin.sort_values(['RecordName', 'Status', 'Default', 'ExpiryYear', 'ExpiryMonth'],ascending=[True, False, False, False, False], inplace=True)
-
-    fin = fin.groupby('RecordName', as_index=False).nth(0)
-    fin.name = 'Financials'
-
-    # fix ranks columns
-
+    ranks.rename(columns={'ContactId': 'RecordName'}, inplace=True)
     procedures.fix_ranks(ranks, ranks='Rank', programs='Program')
     ranks.sort_values(['RecordName','ProgramEnrollmentDate'], ascending=[True, False], inplace=True)
-    ranks.drop(['Rank', 'Program', 'ProgramEnrollmentDate'], axis=1, inplace=True)
-
+    ranks.drop(['Rank', 'Program', 'ProgramEnrollmentDate', 'PromotionId', 'ClassesAttended', 'NextRankPromotionDate', 'IsRankReady', 'ClassesSinceLastRankPromotion', 'CurrentStripe',
+    'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder', 'FullNameSimple'], axis=1, inplace=True, errors='ignore')
 
     ColDict = {}
     for i in ranks.columns:
@@ -813,24 +829,50 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     ranks.replace('', np.nan, inplace=True)
 
     ranks = ranks.groupby('RecordName').agg(ColDict)
-    ranks.name = 'Ranks'
 
-    # clean up Memberships file // sort down to most recent active membership
+    #endregion
 
+    #region Memberships
+    mem.rename(columns={'ContactRecord': 'RecordName', 'PaymentPattern': 'Frequency',
+                        'Processor': 'Billing Company'}, inplace=True)
+
+    mem.drop(['Finance Info Record', 'Transaction Record', 'TotalAmount', 'RemainingBalance', 'DelinquentAmount',
+    'OnHold', 'FirstPayment', 'FinalPayment', 'Ongoing', 'SubTotal', 'TAXONE', 'Tax', 'DelinquentSince',
+    'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays', 'LastName',
+    'FirstName', 'NextPaymentAmount', 'CancellationDate','Notes'], axis=1, inplace=True, errors='ignore')
+
+    # sort down to most recent active membership
     mem.sort_values(['RecordName', 'MembershipStatus', 'Membership Activate'],ascending=[True, True, False], inplace=True)
-
     mem = mem.groupby('RecordName', as_index=False).nth(0)
-    mem.name = 'Memberships'
 
-    mem['Billing Company'].replace({'Billing Direct': 'autoCharge', 'In-House':"In House"}, inplace=True)
-
+    mem['Billing Company'].replace({'Billing Direct': 'autoCharge', 'In-House': "In House"}, inplace=True)
     mem['Frequency'].replace({'Monthly': '30', 'Paid In Full': '0'}, inplace=True)
-
-    mem['Billing Company'] = np.where((mem['Transaction Status'] == 'Completed') & (mem['MembershipStatus'] == 'Active'), 'PIF', mem['Billing Company'])
-
+    mem['Billing Company'] = np.where((mem['Transaction Status'] == 'Completed') & (mem['MembershipStatus'] == 'Active'),
+                                    'PIF', mem['Billing Company'])
     mem['Membership Expiry'] = np.where(mem['Membership Expiry'].isnull(), '12-31-2099', mem['Membership Expiry'])
+    #endregion
 
-    # Merge files
+    #region Financials
+
+    fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber',
+            'Student Last Name','Student First Name'], axis=1, inplace=True, errors='ignore')
+
+    numcols = ['CreditCardNumber', 'ExpiryMonth', 'ExpiryYear', 'AccountNumber', 'RoutingNumber']
+    procedures.remove_non_numeric(numcols)
+
+    # sort down to most recent & reliable card, keep only that Record
+    fin.sort_values(['RecordName', 'Status', 'Default', 'ExpiryYear', 'ExpiryMonth'],
+                    ascending=[True, False, False, False, False], inplace=True)
+    fin = fin.groupby('RecordName', as_index=False).nth(0)
+
+    fin['Payment Method'] = np.where(mem['Billing Company'] =='In House','In House',
+                                        np.where(mem['Billing Company'] == 'PIF','PIF',
+                                            np.where(fin['AccountNumber'].notnull(),'EFT',
+                                                    np.where(fin['CreditCardNumber'].notnull(),'CC', ''))))
+
+    #endregion
+
+    #region Merge
 
     needs_merge = [mem, fin, ranks]
     complete = con
@@ -840,29 +882,41 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
         complete = pd.merge(complete, x, on=key, how='left')
 
 
+    #endregion
 
-    complete.name = 'Complete_File'
-
-    # decide payment method
-    complete['Payment Method'] = np.where(complete['Billing Company'] =='In House','In House',
-                                        np.where(complete['Billing Company'] == 'PIF','PIF',
-                                            np.where(complete['AccountNumber'].notnull(),'EFT',
-                                                    np.where(complete['CreditCardNumber'].notnull(),'CC', ''))))
-
+    #region Output Files
 
     try:
         os.mkdir('clean')
-    except Exception:
+    except OSError:
+        # Directory already exists; it is fine
         pass
 
+    con.name = 'Contacts'
+    mem.name = 'Memberships'
+    fin.name = 'Financials'
+    ranks.name = 'Ranks'
+    complete.name = 'Complete_File'
 
     for i in [mem, fin, ranks, con, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
+    
+    #endregion
 
-def RM_fix(df, parents=None):
+def RM_fix(df, parents=None, date=pd.to_datetime('today')):
     """
     Fully automated cleaning of exports from Rainmaker.
+    Expects the file already converted to a Pandas DataFrame.
+    RainMaker exports are a single file with ambiguous names, so this is preferred.
+    Returns the file and outputs it to the current working directory.
+
+        :param date:
+            The date the export was pulled from Rainmaker.
+        
+        :param parents:
+            Pandas dataframe of the parents' names with IDs.
+
     """
 
     #region Clean for Importability
@@ -881,7 +935,7 @@ def RM_fix(df, parents=None):
                 newDate = str(match.group(1)) + "/20" + str(match.group(2)) + str(match.group(3)) + str(match.group(4))
                 df.at[index, 'Current Program Expires'] = newDate
 
-    df['Contact Type'] = np.where((df['Contact Type'] == 'P') & (df['On Trial'] == 'True'), 'T', df['Contact Type'])
+    df['Contact Type'] = np.where((df['Contact Type'] == 'P') & (df['On Trial'] == 'TRUE'), 'T', df['Contact Type'])
 
     replacements = {'ON HOLD': 'autoCharge','autoCollect': 'autoCharge', 'autoCollect_ONHOLD': 'autoCharge'}
     df['Billing Company'].replace(replacements, inplace=True)
@@ -918,27 +972,58 @@ def RM_fix(df, parents=None):
     df['Billing Company'] = np.where(df['Billing Company'] == 'Family Membership', 
                                          'PIF', df['Billing Company'])
 
+    # New export format lists every Contact with a renewal twice - this consolidates them into one.
+    original_sort = df.index
+    master_drop = []
+    df = df.ix[pd.to_datetime(df['Current Program Start Date']).sort_values().index]
+    for index, group in df.groupby('Id', as_index=False):
+        group = group[group['Contact Type'] == 'S']
+        if len(group.index.values) > 1:
+            group = group.ix[pd.to_datetime(group['Current Program Start Date']).sort_values().index]
+            group_earliest_start_date = group['Current Program Start Date'].head(1)
+            group = group.ix[pd.to_datetime(group['Current Program Expires']).sort_values(ascending=False).index]
+            group_latest_end_date = group['Current Program Expires'].head(1)
+            group = group.ix[pd.to_datetime(group['Current Program Start Date']).sort_values(ascending=False).index]
+            group_latest_start_date = group['Current Program Start Date'].head(1)
+            payments_remaining = group['Payments Remaining'].astype(int).sum()
+            next_payment_due = procedures.closest_date(group['Next Payment Due'], date)
+
+            keep_row = group.head(1)
+            df.at[keep_row.index.values[0], 'Current Program Expires'] = group_latest_end_date.values[0]
+            df.at[keep_row.index.values[0], 'Current Program Start Date'] = group_earliest_start_date.values[0]
+            df.at[keep_row.index.values[0], 'Payments Remaining'] = str(payments_remaining)
+            df.at[keep_row.index.values[0], 'Next Payment Due'] = str(next_payment_due)
+            drop_rows = group.index.values.tolist()
+            drop_rows.remove(*keep_row.index.values)
+            if len(drop_rows) > 0:
+                master_drop.append(*drop_rows)
+
+    df = df.reindex(original_sort)
+    df.drop(df.index[master_drop], inplace=True)
+
     df = df.drop(['Age', 'Total Contract Amount', 'Down Payment', 'Total Financed', 'Middle Init',
                 'First Payment Due Date', 'Last Payment Date', 'Date To Take Payment', 'On Trial',
                 'Current Rank'], axis=1)
     df.dropna(how='all', axis='columns', inplace=True)
+    df.dropna(how='all', inplace=True)
     #endregion
 
     #region Merge
     if isinstance(parents, pd.DataFrame):
-        df = df.merge(parents, left_on='Id', right_on='ID', how='left')
-        df.drop('ID', axis=1, inplace=True)
+        df = df.merge(parents, on='Id', how='left')
         df.drop_duplicates(keep='first', inplace=True)
     #endregion
 
     #region Output
     df.to_csv('clean_' + 'RM' + '.csv', index=False, quoting=1)
+    return df
     #endregion
 
 def ZP_fix(path=os.getcwd()):
     """
     Fully automated cleaning of exports from ZenPlanner.
     """
+
     #region Load Files
 
     path = path + '/*.csv'

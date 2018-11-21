@@ -108,6 +108,8 @@ class Ui_DataTool(object):
         self.actionASF.setObjectName("actionASF")
         self.actionPerfectMind = QtWidgets.QAction(DataTool)
         self.actionPerfectMind.setObjectName("actionPerfectMind")
+        self.actionKickSite = QtWidgets.QAction(DataTool)
+        self.actionKickSite.setObjectName("actionKickSite")
         self.menuFile.addAction(self.actionLoad)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionSave)
@@ -117,6 +119,7 @@ class Ui_DataTool(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionExit)
         self.menuSoftware.addAction(self.actionASF)
+        self.menuSoftware.addAction(self.actionKickSite)
         self.menuSoftware.addAction(self.actionMemberSolutions)
         self.menuSoftware.addAction(self.actionMindBody)
         self.menuSoftware.addAction(self.actionPerfectMind)
@@ -204,6 +207,7 @@ class Ui_DataTool(object):
         self.actionMemberSolutions.setText(_translate("DataTool", "MemberSolutions"))
         self.actionASF.setText(_translate("DataTool", "ASF"))
         self.actionPerfectMind.setText(_translate("DataTool", "PerfectMind"))
+        self.actionKickSite.setText(_translate("DataTool", "KickSite"))
 
 
 if __name__ == "__main__":

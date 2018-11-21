@@ -296,3 +296,33 @@ def drop_quote_rows(df):
         if df[i].dtype != 'datetime64[ns]' and df[i].dtype != 'float64':
             df = df[~df[i].str.contains('"', na=False)]
     return df
+
+def closest_date(series, date=pd.to_datetime('today'), period='future'):
+    """
+    Chooses the date closest to the given date in a given pandas series in the given direction.
+
+        :param series:
+            A pandas series of dates, or dates in string format
+
+        :param date:
+            The date to find the nearest value from. Defaults to today.
+
+        :param period:
+            The direction to search for nearest date in.
+            Can either be 'past' or 'future'.
+        
+    Returns:
+        Nearest date to given date as a string.
+    """
+
+    x = series.copy()
+    x = x.append(pd.Series(date, index=[len(x.index)]))
+    x = x.ix[pd.to_datetime(x).sort_values().index]
+    x = x.reset_index(drop=True)
+    index_today = x[x == date].head(1)
+    if period == 'future':
+        closest_date_in_future = x[index_today.index.values + 1]
+        return closest_date_in_future.values[0]
+    elif period == 'past':
+        closest_date_in_past = x[index_today.index.values - 1]
+        return closest_date_in_past.values[0]

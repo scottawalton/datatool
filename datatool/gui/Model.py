@@ -243,7 +243,6 @@ class PandasTable(QtCore.QAbstractTableModel):
 
             self.layoutChanged.emit()
 
-
     def clearWhitespace(self, selectionModel):
         """
         Removes all newlines, leading and trailing whitespace, carriage returns, and invisible tab-breaks from the selected column(s).

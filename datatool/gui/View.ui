@@ -91,6 +91,7 @@
       <string>Software</string>
      </property>
      <addaction name="actionASF"/>
+     <addaction name="actionKickSite"/>
      <addaction name="actionMemberSolutions"/>
      <addaction name="actionMindBody"/>
      <addaction name="actionPerfectMind"/>
@@ -311,6 +312,11 @@
   <action name="actionPerfectMind">
    <property name="text">
     <string>PerfectMind</string>
+   </property>
+  </action>
+  <action name="actionKickSite">
+   <property name="text">
+    <string>KickSite</string>
    </property>
   </action>
  </widget>

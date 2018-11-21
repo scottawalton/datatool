@@ -1,9 +1,3 @@
-"""
-datatool - to make cleaning data easier and faster,
-
-Created by: Scott Walton
-"""
-
 import datatool.procedures
 
 
