@@ -919,6 +919,8 @@ def RM_fix(df, parents=None, date=pd.to_datetime('today')):
 
     """
 
+    # TODO: Renewal duplicates - Start is oldest Start, End is farthest End
+
     #region Clean for Importability
 
     # Fix Expire Dates when dates are entered as mm/dd/yy
