@@ -21,7 +21,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
             The filename of the file we are opening, if we load one on launch.
         :param path=os.getcwd(: 
             The path to the file we want to open, if we load one on launch.
-    """   
+    """
 
     def __init__(self, filename=None, path=os.getcwd()):
         QtWidgets.QMainWindow.__init__(self)
@@ -47,6 +47,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.actionRedo.triggered.connect(self.redo)
         self.actionAdd_Row.triggered.connect(self.insertBlank)
         self.actionAdd_Column.triggered.connect(self.insertBlank)
+        self.actionDuplicate.triggered.connect(self.duplicateSelected)
 
         # Operations Menu Actions
         self.actionClear_Whitespace.triggered.connect(self.clearWhitespace)
@@ -54,8 +55,10 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.actionCorrect_Date_Format.triggered.connect(self.correctDateFormat)
         self.actionDisperse_Ranks_By_Program.triggered.connect(self.ranksByProgram)
         self.actionFind_and_Replace.triggered.connect(self.findAndReplace)
+        self.actionNew_Rows_On_Separator.triggered.connect(self.newRowsOnSeparator)
 
         self.actionKickSite.triggered.connect(self.software_ks)
+        self.actionRainmaker.triggered.connect(self.software_rm)
 
         # View Menu Actions
         self.actionDisplay_Command_Prompt.triggered.connect(self.toggleCommandPrompt)
@@ -117,7 +120,6 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         msg = QtWidgets.QMessageBox(self)
         msg.setText(message)
         msg.exec_()
-    
 
     #region Tab Functionality
     def getCurrentView(self):
@@ -169,7 +171,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         panda = view.model()
         return panda
 
-    def createTab(self, pandaData):
+    def createTab(self, pandaData, name="Tab"):
         """
         Creates a new tab with the given PandasTable model displayed in a TableView.
         Automatically appends it to the end of the tab bar.
@@ -197,7 +199,8 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         verticalLayout.addWidget(tableView)
         panda = Model.PandasTable(pandaData, parent=tab)
         tableView.setModel(panda)
-        self.tabWidget.addTab(tab, "Tab")
+        self.name = name
+        self.tabWidget.addTab(tab, self.name)
 
     def newEmptyTab(self):
         """
@@ -306,6 +309,15 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
         # Pass it to the panda model to deal with
         self.getCurrentPanda().insertBlank(selectionModel)
+
+    def duplicateSelected(self):
+    
+        # A selection model to get the current selection
+        selectionModel = self.getCurrentView().selectionModel()
+
+        # Pass it to the panda model to deal with
+        self.getCurrentPanda().duplicateSelected(selectionModel)
+
     #endregion
 
     #region Operations Menu
@@ -364,21 +376,54 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         # Pass to panda
         self.getCurrentPanda().findAndReplace(findText, replaceText, selectionModel)
 
+    def newRowsOnSeparator(self):
+        """
+        Prompts the user for the column and separator and passes the informaiton to the Model.
+        """
+
+        # Prompts user for column and separator
+        column, separator = Model.NewRowsOnSeparatorDialogBox.getResults(self.getCurrentPanda(), self)
+
+        # Pass to panda
+        self.getCurrentPanda().newRowsOnSeparator(column, separator)
+
     #region Software
 
     def software_ks(self):
 
-        export = QtWidgets.QFileDialog.getOpenFileName(self, 'Select PerfectMind Export File', os.getcwd(), 'XLSX(*.xlsx)')
-
-        path, _ = os.path.splitext(export[0])
-
-        active, billing, fam, complete = software.PM_fix(path=path)
+        export = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Directory Containing KickSite Export Files', os.getcwd())
 
         try:
-            for i in [active, billing, fam, complete]:
-                self.createTab(i)
+            active, billing, fam, complete = software.KS_fix(path=export)
+            self.createTab(active, name="Contacts")
+            self.createTab(billing, name="Memberships")
+            self.createTab(fam, name="Families")
+            self.createTab(complete, name="Final")
         except UnboundLocalError:
             self.notifyUser("Something went wrong. Are all of the required sheets present?")
+        except:
+            errorMsg = 'Something went wrong. \n' + \
+                        'See stack trace: \n\n' + traceback.format_exc()
+            self.notifyUser(errorMsg)
+
+    def software_rm(self):
+
+        response = Model.RainmakerDialogBox.getResponse(self)
+
+        if response is not [None, None, None]:
+            try:
+                complete = software.RM_fix(response[0], parents=response[1])
+                filepath, filename = os.path.split(response[0])
+                original = procedures.load(filename, filepath)
+                self.createTab(original, name="Original")
+                self.createTab(complete, name="Final")
+            except Exception:
+                self.notifyUser('Please convert file to .csv or .xlsx')
+            except:
+                errorMsg = 'Something went wrong. \n' + \
+                            'See stack trace: \n\n' + traceback.format_exc()
+                self.notifyUser(errorMsg)
+
 
     #endregion
 

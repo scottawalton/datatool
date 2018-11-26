@@ -54,12 +54,12 @@ if __name__ == '__main__':
         if args.filename is None:
             print('You need to specify the filename.')
         else:
-            df = procedures.load(args.filename, args.filepath)
+            mainPath = os.path.join(args.filepath, args.filename)
             try:
-                parents = procedures.load('ParentsNames.csv', args.filepath)
-                software.RM_fix(df, parents)
+                parentPath = os.path.join(args.filepath, 'ParentsNames.csv')
+                software.RM_fix(mainPath, parentPath)
             except FileNotFoundError:
-                software.RM_fix(df)
+                software.RM_fix(mainPath)
 
     elif args.gui and args.filename is not None:
         app = QApplication(sys.argv)

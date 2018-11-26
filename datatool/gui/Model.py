@@ -1,7 +1,7 @@
 import os
 import sys
 import random
-import string
+import string as st
 
 import pandas as pd
 import numpy as np
@@ -223,6 +223,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             row = pd.DataFrame(columns=self.df.columns.values, index=[rowMaxIndex])
             self.df = self.df.append(row, ignore_index=False)
             self.df = self.df.sort_index().reset_index(drop=True)
+            self.appendState()
         
         if columns != None:
             if len(columns) > 1:
@@ -235,11 +236,49 @@ class PandasTable(QtCore.QAbstractTableModel):
                 colMaxIndex = int(((self.df.columns == columns[0]).nonzero())[0][0])
 
             try:
-                colName = str(random.choice(string.ascii_letters)) 
+                colName = str(random.choice(st.ascii_letters)) 
                 self.df.insert(loc=colMaxIndex + 1, value=pd.Series(), column=colName)
+                self.appendState()
             except ValueError:
-                colName = str(random.choice(string.ascii_letters.pop(colName))) 
+                colName = str(random.choice(st.ascii_letters.pop(colName))) 
                 self.df.insert(loc=colMaxIndex + 1, value=pd.Series(), column=colName)
+                self.appendState()
+
+            self.layoutChanged.emit()
+
+    def duplicateSelected(self, selectionModel):
+        """
+        Duplicates the selected row or column and inserts it directly after.
+        """
+
+        columns, rows = self.translateSelection(selectionModel)
+
+        if rows != None:
+            rowMaxIndex = max(rows) + .5
+            row = self.df.ix[rows]
+            self.df = self.df.append(row, ignore_index=False)
+            self.df = self.df.sort_index().reset_index(drop=True)
+            self.appendState()
+        
+        if columns != None:
+            if len(columns) > 1:
+                colMaxIndex = 0
+                for x in columns:
+                    val = int(((self.df.columns == x).nonzero())[0][0])
+                    if val > colMaxIndex:
+                        colMaxIndex = val
+            else:
+                colMaxIndex = int(((self.df.columns == columns[0]).nonzero())[0][0])
+
+            try:
+                colName = str(random.choice(st.ascii_letters)) 
+                if len(columns) > 1:
+                    for i in columns:
+                        colName =  '_' + i
+                        self.df.insert(loc=colMaxIndex + 1, value=self.df[i],  column=colName)
+                    self.appendState()
+            except:
+                pass
 
             self.layoutChanged.emit()
 
@@ -337,7 +376,10 @@ class PandasTable(QtCore.QAbstractTableModel):
 
         selection = self.translateSelection(selectionModel)
 
-        if selection[0] != None:
+        if findText is None and replaceText is None:
+            return        
+
+        if selection[0] is not None:
             for col in selection[0]:
                 self.df[col] = self.df[col].str.replace(findText, replaceText, regex=True)
             self.appendState()
@@ -349,11 +391,29 @@ class PandasTable(QtCore.QAbstractTableModel):
             if reply == QtWidgets.QMessageBox.Yes:
                 self.df.replace({findText : replaceText}, regex=True, inplace=True)
                 self.appendState()
-            
+
             else:
                 pass
 
         selectionModel.clear()
+
+    def newRowsOnSeparator(self, column, separator):
+        """
+        Creates new rows from the given column determined by the given separator.
+
+        :param column:
+            The column to pull data from.
+
+        :param separator:
+            The characters that separate the data.
+        """
+
+        if separator is None:
+            return
+        
+        self.df = procedures.tidy_split(self.df, column, separator)
+        self.appendState()
+
     #endregion
 
 class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
@@ -441,6 +501,8 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
         self.line.selectAll()
         self.sectionedit = section
 
+#region Operation Models
+
 class RanksByProgramsDialogBox(QtWidgets.QDialog):
     """
     A dialog box to get the information required by the ranksbyPrograms function.
@@ -485,6 +547,49 @@ class RanksByProgramsDialogBox(QtWidgets.QDialog):
         else:
             return None, None
 
+class NewRowsOnSeparatorDialogBox(QtWidgets.QDialog):
+    """
+    A dialog box to get the information required by the newRowsOnSeparator function.
+    """
+
+    def __init__(self, pandaTable, parent):
+        """
+        Initializes the UI and sets the two dropdowns to display column names of the active Panda.
+        """   
+
+        QtWidgets.QDialog.__init__(self)
+
+        self.df = pandaTable
+
+        self.layout = QtWidgets.QGridLayout(self)
+        self.columnSelect = QtWidgets.QComboBox()
+        self.columnSelect.addItems(self.df.columns.values)
+        self.layout.addWidget(self.columnSelect, 0, 1)
+        self.layout.addWidget(QtWidgets.QLabel('Column:'), 0, 0)
+        self.separatorLine = QtWidgets.QLineEdit()
+        self.layout.addWidget(self.separatorLine, 1, 1)
+        self.layout.addWidget(QtWidgets.QLabel('Separator:'), 1, 0)
+        self.confirm = QtWidgets.QPushButton('Confirm')
+        self.layout.addWidget(self.confirm, 3, 1)
+        self.confirm.clicked.connect(self.accept)
+        self.cancel = QtWidgets.QPushButton('Cancel')
+        self.cancel.clicked.connect(self.reject)
+        self.layout.addWidget(self.cancel, 3, 0)
+        self.setWindowTitle('New Rows from Column by Separator')
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+
+    def getResults(self, parent=None):
+        """
+        Returns the user's input
+        """   
+
+        dialog = NewRowsOnSeparatorDialogBox(self.df, parent)
+        result = dialog.exec_()
+        if result == QtWidgets.QDialog.Accepted:
+            return dialog.columnSelect.currentText(), dialog.separatorLine.text()
+        else:
+            return None, None
+
 class FindAndReplaceDialogBox(QtWidgets.QDialog):
     """
     A dialog box to retrieve the two text values required by the findAndReplace function.
@@ -526,3 +631,80 @@ class FindAndReplaceDialogBox(QtWidgets.QDialog):
             return dialog.findText.text() , dialog.replaceText.text()
         else:
             return None, None
+
+#endregion
+
+#region Software Models
+
+class RainmakerDialogBox(QtWidgets.QDialog):
+    """
+    A dialog box to get the location of the exported file, extra reports, and the date.
+    Anything and everything may be left blank.
+    """
+
+    def __init__(self, parent):
+        """
+        Initializes the UI and sets the properties.
+        """   
+
+        QtWidgets.QDialog.__init__(self)
+
+        self.mainExportLine = QtWidgets.QLineEdit()
+        self.parentsNamesLine = QtWidgets.QLineEdit()
+        self.customFieldsLine = QtWidgets.QLineEdit()
+        self.mainButton = QtWidgets.QPushButton()
+        self.parentButton = QtWidgets.QPushButton()
+        self.customButton = QtWidgets.QPushButton()
+        self.mainButton.clicked.connect(self.getMain)
+        self.parentButton.clicked.connect(self.getParent)
+        self.customButton.clicked.connect(self.getCustom)
+        self.layout = QtWidgets.QGridLayout(self)
+        self.layout.addWidget(self.mainExportLine, 0, 1)
+        self.layout.addWidget(self.mainButton, 0, 2)
+        self.layout.addWidget(QtWidgets.QLabel('Main File:'), 0, 0)
+        self.layout.addWidget(self.parentsNamesLine, 1, 1)
+        self.layout.addWidget(self.parentButton, 1, 2)
+        self.layout.addWidget(QtWidgets.QLabel('Parents Names:'), 1, 0)
+        self.layout.addWidget(self.customFieldsLine, 2, 1)
+        self.layout.addWidget(self.customButton, 2, 2)
+        self.layout.addWidget(QtWidgets.QLabel('Custom Fields:'), 2, 0)
+        self.confirm = QtWidgets.QPushButton('Confirm')
+        self.layout.addWidget(self.confirm, 4, 1)
+        self.confirm.clicked.connect(self.accept)
+        self.cancel = QtWidgets.QPushButton('Cancel')
+        self.cancel.clicked.connect(self.reject)
+        self.layout.addWidget(self.cancel, 4, 0)
+        self.setWindowTitle('Rainmaker Export Handler')
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
+        self.main = None
+        self.parent = None
+        self.custom = None
+
+    def getMain(self):
+        self.main = QtWidgets.QFileDialog.getOpenFileName(self, 'Select File', os.getcwd(), 'All Support Files (*.xls *.csv *.xlsx)')
+        self.mainExportLine.setText(self.main[0])
+
+    def getParent(self):
+        self.parent = QtWidgets.QFileDialog.getOpenFileName(self, 'Select File', os.getcwd(), 'All Support Files (*.xls *.csv *.xlsx)')
+        self.parentsNamesLine.setText(self.parent[0])
+
+    def getCustom(self):
+        self.custom = QtWidgets.QFileDialog.getOpenFileName(self, 'Select File', os.getcwd(), 'All Support Files (*.xls *.csv *.xlsx)')
+        self.customFieldsLine.setText(self.custom[0])
+
+    def getResponse(self, parent=None):
+        dialog = RainmakerDialogBox(parent)
+        result = dialog.exec_()
+
+        if result == QtWidgets.QDialog.Accepted:
+
+            if dialog.main is not None and dialog.parent is not None and dialog.custom is not None:
+                return dialog.main[0], dialog.parent[0], dialog.custom[0]
+            elif dialog.main is not None and dialog.parent is not None and dialog.custom is None:
+                return dialog.main[0], dialog.parent[0], None
+            elif dialog.main is not None and dialog.parent is None and dialog.custom is None:
+                return dialog.main[0], None, None
+        else:
+            return None, None, None
+
+#endregion

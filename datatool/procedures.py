@@ -1,9 +1,6 @@
 """
 Commonly used procedures are kept here to keep code clean
-as well as make life easier. They can be called within the
-GUI at any time by prefixing the function name with "procedures.".
-
-Created by: Scott Walton
+as well as make life easier.
 """
 
 import os
@@ -12,9 +9,10 @@ import glob
 import numpy as np
 import pandas as pd
 
-def load(filename, filepath=os.getcwd()):
+def load(path, directory=None):
     """
     Loads the given filename found at filepath with the preferred options.
+    Accepts CSV, XLS, XLSX, HTML, and XML.
 
         :param filename:
             The name of the file.
@@ -25,9 +23,26 @@ def load(filename, filepath=os.getcwd()):
         Pandas DataFrame
     """
 
-    path = filepath + '/' + filename
+    if directory is not None:
+        path = os.path.join(directory, path)
 
-    while True:
+    _, ext = os.path.splitext(path)
+
+    if ext.lower() == '.csv':
+        try:
+            df = pd.read_csv(path, index_col=None, dtype=object)
+            return df
+        except:
+            df = pd.read_csv(path, index_col=None, dtype=object, encoding="ISO-8859-1")
+            return df
+    elif ext.lower() == '.xls' or ext.lower() == '.xlsx':
+        try:
+            df = pd.read_excel(path, index_col=None, dtype=object)
+            return df
+        except:
+            raise Exception
+    else:
+    ## Incase there isn't a filetype specified
         try:
             df = pd.read_csv(path, index_col=None, dtype=object)
             return df

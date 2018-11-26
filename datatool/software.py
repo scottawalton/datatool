@@ -122,6 +122,7 @@ def KS_fix(path=os.getcwd()):
     inactive = pd.DataFrame()
     frozen = pd.DataFrame()
     billing = pd.DataFrame()
+    fam = pd.DataFrame()
 
     for i in files:
 
@@ -227,15 +228,18 @@ def KS_fix(path=os.getcwd()):
 
     #region Memberships
 
-    # split famliy memberships into individuals based on family file
+    # split famliy memberships into individuals based on family file, if it exists
 
-    if not fam.empty and not billing.empty:
-        fam_billing = billing[pd.isnull(billing['Billable first name'])]
+    if not billing.empty:
+
         billing = billing[pd.notnull(billing['Billable first name'])]
         billing['Members'] = billing['Billable first name'] + ' ' + billing['Billable last name']
-        fam_billing.rename(columns={'Billable last name': 'Family'}, inplace=True)
-        fam_billing = fam_billing.merge(fam, on='Family')
-        billing = billing.append(fam_billing, sort=False)
+
+        if not fam.empty:
+            fam_billing = billing[pd.isnull(billing['Billable first name'])]
+            fam_billing.rename(columns={'Billable last name': 'Family'}, inplace=True)
+            fam_billing = fam_billing.merge(fam, on='Family')
+            billing = billing.append(fam_billing, sort=False)
 
         billing = billing.sort_values('Status').drop_duplicates(subset=['Members'],keep='first')
 
@@ -243,7 +247,7 @@ def KS_fix(path=os.getcwd()):
 
         billing.drop(['Inactivated Date','Auto Inactivated', 'Consecutive Declines',
             'Last Declined Date', 'Days until next charge', 'Billable first name',
-            'Billable last name', 'Family'], axis=1, inplace=True)
+            'Billable last name', 'Family'], axis=1, inplace=True, errors='ignore')
 
     #endregion
 
@@ -275,7 +279,7 @@ def KS_fix(path=os.getcwd()):
     for i in [active, billing, fam, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
-    
+
     return active, billing, fam, complete
     #endregion
 
@@ -768,6 +772,11 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     path = path + '/*.csv'
     files = glob.glob(path)
 
+    # This prevents errors about undefined variables
+    # only done to files that are not 100% necessary
+    fin = pd.DataFrame()
+    ranks = pd.DataFrame()
+
     for i in files:
 
         filepath, filename = os.path.split(i)
@@ -777,15 +786,15 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
             print('Found Contacts file -- ' + filename)
 
         if "Finance" in filename:
-            fin = procedures.load(filename, index_col, filepath)
+            fin = procedures.load(filename, filepath)
             print('Found Financials file -- ' + filename)
 
         if "Promotions" in filename:
-            ranks = procedures.load(filename, index_col, filepath)
+            ranks = procedures.load(filename, filepath)
             print('Found Ranks file -- ' + filename)
 
         if "Trans" in filename:
-            mem = procedures.load(filename, index_col, filepath)
+            mem = procedures.load(filename, filepath)
             print('Found Memberships file -- ' + filename)
 
     #endregion
@@ -814,22 +823,21 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     #endregion
 
     #region Ranks
+    if not ranks.empty:
+        ranks.rename(columns={'ContactId': 'RecordName'}, inplace=True)
+        procedures.fix_ranks(ranks, ranks='Rank', programs='Program')
+        ranks.sort_values(['RecordName','ProgramEnrollmentDate'], ascending=[True, False], inplace=True)
+        ranks.drop(['Rank', 'Program', 'ProgramEnrollmentDate', 'PromotionId', 'ClassesAttended', 'NextRankPromotionDate', 'IsRankReady', 'ClassesSinceLastRankPromotion', 'CurrentStripe',
+        'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder', 'FullNameSimple'], axis=1, inplace=True, errors='ignore')
 
-    ranks.rename(columns={'ContactId': 'RecordName'}, inplace=True)
-    procedures.fix_ranks(ranks, ranks='Rank', programs='Program')
-    ranks.sort_values(['RecordName','ProgramEnrollmentDate'], ascending=[True, False], inplace=True)
-    ranks.drop(['Rank', 'Program', 'ProgramEnrollmentDate', 'PromotionId', 'ClassesAttended', 'NextRankPromotionDate', 'IsRankReady', 'ClassesSinceLastRankPromotion', 'CurrentStripe',
-    'NextStripePromotionDate', 'NextStripe', 'DaysSinceRankPromoted', 'RankOrder', 'FullNameSimple'], axis=1, inplace=True, errors='ignore')
+        ColDict = {}
+        for i in ranks.columns:
+            ColDict[i] = 'first'
 
-    ColDict = {}
-    for i in ranks.columns:
-        ColDict[i] = 'first'
+            # Replace empty strings with Nan
+        ranks.replace('', np.nan, inplace=True)
 
-        # Replace empty strings with Nan
-    ranks.replace('', np.nan, inplace=True)
-
-    ranks = ranks.groupby('RecordName').agg(ColDict)
-
+        ranks = ranks.groupby('RecordName').agg(ColDict)
     #endregion
 
     #region Memberships
@@ -853,22 +861,22 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     #endregion
 
     #region Financials
+    if not fin.empty:
+        fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber',
+                'Student Last Name','Student First Name'], axis=1, inplace=True, errors='ignore')
 
-    fin.drop(['FinanceInfoRecordName', 'Street', 'City', 'PostalCode', 'BankNumber',
-            'Student Last Name','Student First Name'], axis=1, inplace=True, errors='ignore')
+        numcols = ['CreditCardNumber', 'ExpiryMonth', 'ExpiryYear', 'AccountNumber', 'RoutingNumber']
+        procedures.remove_non_numeric(numcols)
 
-    numcols = ['CreditCardNumber', 'ExpiryMonth', 'ExpiryYear', 'AccountNumber', 'RoutingNumber']
-    procedures.remove_non_numeric(numcols)
+        # sort down to most recent & reliable card, keep only that Record
+        fin.sort_values(['RecordName', 'Status', 'Default', 'ExpiryYear', 'ExpiryMonth'],
+                        ascending=[True, False, False, False, False], inplace=True)
+        fin = fin.groupby('RecordName', as_index=False).nth(0)
 
-    # sort down to most recent & reliable card, keep only that Record
-    fin.sort_values(['RecordName', 'Status', 'Default', 'ExpiryYear', 'ExpiryMonth'],
-                    ascending=[True, False, False, False, False], inplace=True)
-    fin = fin.groupby('RecordName', as_index=False).nth(0)
-
-    fin['Payment Method'] = np.where(mem['Billing Company'] =='In House','In House',
-                                        np.where(mem['Billing Company'] == 'PIF','PIF',
-                                            np.where(fin['AccountNumber'].notnull(),'EFT',
-                                                    np.where(fin['CreditCardNumber'].notnull(),'CC', ''))))
+        fin['Payment Method'] = np.where(mem['Billing Company'] =='In House','In House',
+                                            np.where(mem['Billing Company'] == 'PIF','PIF',
+                                                np.where(fin['AccountNumber'].notnull(),'EFT',
+                                                        np.where(fin['CreditCardNumber'].notnull(),'CC', ''))))
 
     #endregion
 
@@ -878,9 +886,9 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     complete = con
 
     for x in needs_merge:
-        x.set_index('RecordName')
-        complete = pd.merge(complete, x, on=key, how='left')
-
+        if not x.empty:
+            x.set_index('RecordName')
+            complete = pd.merge(complete, x, on=key, how='left')
 
     #endregion
 
@@ -904,22 +912,32 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     
     #endregion
 
-def RM_fix(df, parents=None, date=pd.to_datetime('today')):
+def RM_fix(path, parents=None, date=pd.to_datetime('today')):
     """
     Fully automated cleaning of exports from Rainmaker.
-    Expects the file already converted to a Pandas DataFrame.
-    RainMaker exports are a single file with ambiguous names, so this is preferred.
     Returns the file and outputs it to the current working directory.
 
+        :param path:
+            Full path to the Rainmaker export.
         :param date:
             The date the export was pulled from Rainmaker.
         
         :param parents:
-            Pandas dataframe of the parents' names with IDs.
-
+            Path to Parents' Names export file.
     """
 
-    # TODO: Renewal duplicates - Start is oldest Start, End is farthest End
+    #region Load    
+
+    try:
+        df = procedures.load(path)
+    except Exception:
+        raise Exception
+
+    if parents is not None:
+        filepath, filename = os.path.split(parents)
+        parents = procedures.load(filename, filepath)
+
+    #endregion
 
     #region Clean for Importability
 
@@ -937,13 +955,17 @@ def RM_fix(df, parents=None, date=pd.to_datetime('today')):
                 newDate = str(match.group(1)) + "/20" + str(match.group(2)) + str(match.group(3)) + str(match.group(4))
                 df.at[index, 'Current Program Expires'] = newDate
 
-    df['Contact Type'] = np.where((df['Contact Type'] == 'P') & (df['On Trial'] == 'TRUE'), 'T', df['Contact Type'])
+    df['Contact Type'] = np.where((df['Contact Type'] == 'P') & \
+                        (np.logical_or(df['On Trial'] == 'TRUE', df['On Trial'] == '1')),\
+                                                         'T', df['Contact Type'])
 
     replacements = {'ON HOLD': 'autoCharge','autoCollect': 'autoCharge', 'autoCollect_ONHOLD': 'autoCharge'}
     df['Billing Company'].replace(replacements, inplace=True)
 
     df['Billing Company'] = np.where((df['Payment Method'] == 'In House') & (df['Billing Company'].isnull()),
                                          'In House', df['Billing Company'])
+    df['Payment Method'] = np.where((df['Billing Company'] == 'In House') & (df['Payment Method'].isnull()),
+                                         'In House', df['Payment Method'])
     df['Billing Company'] = np.where((df['Payment Method'] == 'PIF') & (df['Billing Company'].isnull()), 
                                          'PIF', df['Billing Company'])
 
