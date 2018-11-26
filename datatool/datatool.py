@@ -22,9 +22,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Cleans up messy data files.")
     parser.add_argument('-f', '--filepath', default=os.getcwd(), type=str, metavar='', help='Path to file')
     parser.add_argument('-t', '--type', type=str, metavar='', help='Type of data file, e.g. RM, PM',
-                        choices=['RM', 'KS', 'PM', 'MB', 'ASF', 'ZP', 'MS'])
+                        choices=['RM', 'KS', 'PM', 'MB', 'ASF', 'ZP', 'MS', 'CW'])
     parser.add_argument('-e', '--extract', action='store_true', help='Convert from Excel to CSV')
     parser.add_argument('-g', '--gui', action='store_false', help='Disable the GUI')
+    parser.add_argument('-d', '--date', type=str, help='The date the report was pulled')
     parser.add_argument('filename', help='Csv file to clean', nargs='?', default=None)
     args = parser.parse_args()
 
@@ -36,6 +37,9 @@ if __name__ == '__main__':
 
     elif args.type == 'PM':
         software.PM_fix()
+
+    elif args.type == 'CW':
+        software.CW_fix()
 
     elif args.type == 'MB':
         software.MB_fix()
@@ -57,9 +61,9 @@ if __name__ == '__main__':
             mainPath = os.path.join(args.filepath, args.filename)
             try:
                 parentPath = os.path.join(args.filepath, 'ParentsNames.csv')
-                software.RM_fix(mainPath, parentPath)
+                software.RM_fix(mainPath, parentPath, date=args.date)
             except FileNotFoundError:
-                software.RM_fix(mainPath)
+                software.RM_fix(mainPath, date=args.date)
 
     elif args.gui and args.filename is not None:
         app = QApplication(sys.argv)

@@ -764,7 +764,6 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
 def PM_fix(path=os.getcwd(), key='RecordName'):
     """
     Fully automated cleaning of PerfectMind's paid export files.
-    Needs expansion to handle the free version.
     """
 
     #region Load FIles
@@ -781,7 +780,7 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
 
         filepath, filename = os.path.split(i)
 
-        if "Contacts" in filename:
+        if "Contact" in filename:
             con = procedures.load(filename, filepath)
             print('Found Contacts file -- ' + filename)
 
@@ -813,8 +812,7 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     procedures.fix_ranks(con, ranks='PrimaryNumber', programs='PrimaryPhone')
     procedures.fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
     con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber'], axis=1, inplace=True)
-    for i in ['Work', 'Mobile', 'Home']:
-        procedures.remove_non_numeric(con, i)
+    procedures.remove_non_numeric(con, ['Work', 'Mobile', 'Home'])
 
     con.rename(columns={'BecameLead': 'Date Added', 'PerfectScanID': 'Alternate ID (Scan)', 'CampaignName': 'Source'}, inplace=1)
 
@@ -907,6 +905,104 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     complete.name = 'Complete_File'
 
     for i in [mem, fin, ranks, con, complete]:
+
+        i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
+    
+    #endregion
+
+def CW_fix(path=os.getcwd(), key='RecordName'):
+    """
+    Fully automated cleaning of PerfectMind's free export files.
+    """
+
+    #region Load FIles
+
+    path = path + '/*.csv'
+    files = glob.glob(path)
+
+    # This prevents errors about undefined variables
+    # only done to files that are not 100% necessary
+    ranks = pd.DataFrame()
+
+    for i in files:
+
+        filepath, filename = os.path.split(i)
+
+        if "Contact" in filename:
+            con = procedures.load(filename, filepath)
+            print('Found Contacts file -- ' + filename)
+
+        if "Promotions" in filename:
+            ranks = procedures.load(filename, filepath)
+            print('Found Ranks file -- ' + filename)
+
+        if "Trans" in filename:
+            mem = procedures.load(filename, filepath)
+            print('Found Memberships file -- ' + filename)
+
+    #endregion
+
+    #region Contacts
+
+    con['Type'].replace({'Lead': 'P', 'Former student':"F", 'Active student': 'S'}, inplace=True)
+    procedures.fix_ranks(con, ranks='Primary Phone', programs='Primary Phone Type')
+    procedures.fix_ranks(con, ranks='Secondary Phone', programs='Secondary Phone Type')
+    con.drop(['Primary Phone', 'Primary Phone Type', 'Secondary Phone', 'Secondary Phone Type'], axis=1, inplace=True)
+    procedures.remove_non_numeric(con, ['Work', 'Mobile', 'Home'])
+
+    con.rename(columns={'Created Date': 'Date Added', 'PerfectScan ID': 'Alternate ID (Scan)'}, inplace=1)
+
+    #con['Source'] = np.where((con['Source'].isnull()) & (con['ReferedBy'].notnull()), 'Referral', con['Source'])
+
+    #endregion
+
+    #region Ranks
+    if not ranks.empty:
+        procedures.fix_ranks(ranks, ranks='Rank', programs='Program/Style')
+        ranks.drop_duplicates(inplace=True)
+    #endregion
+
+    #region Memberships
+    mem.rename(columns={'Payment Pattern': 'Frequency',
+                        'Processor': 'Billing Company'}, inplace=True)
+
+    # sort down to most recent active membership
+    mem = mem.ix[pd.to_datetime(mem['Activation DateTime']).sort_values().index]
+    mem.sort_values(['Contact ID', 'Membership Status', 'Activation DateTime'], ascending=[True, True, False], inplace=True)
+    mem = mem.groupby('Contact ID', as_index=False).nth(0)
+
+    mem['Billing Company'].replace({'Billing Direct': 'autoCharge', 'In-House': "In House"}, inplace=True)
+    mem['Frequency'].replace({'Monthly': '30', 'Paid In Full': '0'}, inplace=True)
+    mem['Billing Company'] = np.where((mem['Status'] == 'Completed') & (mem['Membership Status'] == 'Active'),
+                                    'PIF', mem['Billing Company'])
+    mem['Expiry DateTime'] = np.where(mem['Expiry DateTime'].isnull(), '12-31-2099', mem['Expiry DateTime'])
+    #endregion
+
+    #region Merge
+
+    needs_merge = [mem, ranks]
+    complete = con
+
+    for x in needs_merge:
+        if not x.empty:
+            complete = pd.merge(complete, x, on='Contact ID', how='left')
+
+    #endregion
+
+    #region Output Files
+
+    try:
+        os.mkdir('clean')
+    except OSError:
+        # Directory already exists; it is fine
+        pass
+
+    con.name = 'Contacts'
+    mem.name = 'Memberships'
+    ranks.name = 'Ranks'
+    complete.name = 'Complete_File'
+
+    for i in [mem, ranks, con, complete]:
 
         i.to_csv('clean/' + i.name + '.csv', quoting=1, index=False)
     
@@ -1020,7 +1116,9 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
             drop_rows = group.index.values.tolist()
             drop_rows.remove(*keep_row.index.values)
             if len(drop_rows) > 0:
-                master_drop.append(*drop_rows)
+                for i in drop_rows:
+                    if i not in master_drop:
+                        master_drop.append(i)
 
     df = df.reindex(original_sort)
     df.drop(df.index[master_drop], inplace=True)
@@ -1034,7 +1132,7 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
 
     #region Merge
     if isinstance(parents, pd.DataFrame):
-        df = df.merge(parents, on='Id', how='left')
+        df = df.merge(parents, left_on='Id', right_on='ID', how='left')
         df.drop_duplicates(keep='first', inplace=True)
     #endregion
 
