@@ -228,7 +228,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         """
 
 
-        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getcwd(), 'CSV(*.csv)')
+        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getcwd(), 'CSV, XLSX(*.csv *.xlsx)')
 
         # If a file was specified, load it up. If not, tell the user to pick a valid file
         if path[0] != '':
