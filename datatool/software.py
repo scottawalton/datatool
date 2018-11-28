@@ -1132,7 +1132,9 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
 
     #region Merge
     if isinstance(parents, pd.DataFrame):
-        df = df.merge(parents, left_on='Id', right_on='ID', how='left')
+        if 'ID' in parents.columns.values:
+            parents.rename(columns={'ID': 'Id'}, inplace=True)
+        df = df.merge(parents, on='Id', how='left')
         df.drop_duplicates(keep='first', inplace=True)
     #endregion
 
