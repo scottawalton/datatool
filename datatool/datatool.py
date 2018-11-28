@@ -59,8 +59,8 @@ if __name__ == '__main__':
             print('You need to specify the filename.')
         else:
             mainPath = os.path.join(args.filepath, args.filename)
+            parentPath = os.path.join(args.filepath, 'ParentsNames.csv')
             try:
-                parentPath = os.path.join(args.filepath, 'ParentsNames.csv')
                 software.RM_fix(mainPath, parentPath, date=args.date)
             except FileNotFoundError:
                 software.RM_fix(mainPath, date=args.date)

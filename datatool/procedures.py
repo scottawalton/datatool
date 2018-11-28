@@ -336,8 +336,10 @@ def closest_date(series, date=pd.to_datetime('today'), period='future'):
     x = x.reset_index(drop=True)
     index_today = x[x == date].head(1)
     if period == 'future':
-        closest_date_in_future = x[index_today.index.values + 1]
-        return closest_date_in_future.values[0]
+        if x.tail(1).values == index_today.values:
+            return closest_date(series, date=date, period='past')
+        closest_date_in_future = x[int(index_today.index.values) + 1]
+        return closest_date_in_future
     elif period == 'past':
-        closest_date_in_past = x[index_today.index.values - 1]
-        return closest_date_in_past.values[0]
+        closest_date_in_past = x[int(index_today.index.values) - 1]
+        return closest_date_in_past

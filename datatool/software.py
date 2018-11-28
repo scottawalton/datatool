@@ -864,7 +864,7 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
                 'Student Last Name','Student First Name'], axis=1, inplace=True, errors='ignore')
 
         numcols = ['CreditCardNumber', 'ExpiryMonth', 'ExpiryYear', 'AccountNumber', 'RoutingNumber']
-        procedures.remove_non_numeric(numcols)
+        procedures.remove_non_numeric(fin, numcols)
 
         # sort down to most recent & reliable card, keep only that Record
         fin.sort_values(['RecordName', 'Status', 'Default', 'ExpiryYear', 'ExpiryMonth'],
