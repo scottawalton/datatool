@@ -63,6 +63,9 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         # View Menu Actions
         self.actionDisplay_Command_Prompt.triggered.connect(self.toggleCommandPrompt)
 
+        # Help Menu Actions
+        self.actionHelp.triggered.connect(self.help)
+
         # Run button
         self.runButton.clicked.connect(self.runCommand)
 
@@ -252,7 +255,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         """
 
 
-        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getcwd(), 'CSV(*.csv)')
+        path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', os.getcwd(), 'CSV, XLSX(*.csv *.xlsx)')
 
         # If a file was specified, load it up. If not, tell the user to pick a valid file
         if path[0] != '':
@@ -437,6 +440,11 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         else:
             self.textEdit.show()
             self.runButton.show()
+    #endregion
+
+    #region Help Menu
+    def help(self):
+        Model.HelpModel().help()
     #endregion
 
 if __name__ == "__main__":

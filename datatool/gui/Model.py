@@ -708,3 +708,75 @@ class RainmakerDialogBox(QtWidgets.QDialog):
             return None, None, None
 
 #endregion
+
+#region Help Dialog
+
+class HelpModel(QtWidgets.QDialog):
+    """
+    A help wiki to teach the user about the program and how to use it.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initializes the UI and sets the properties.
+        """   
+
+        QtWidgets.QDialog.__init__(self)
+        self.resize(1000, 700)
+
+        self.topicList = QtWidgets.QListWidget()
+        self.topicList.setFixedWidth(200)
+        self.topicList.addItem("General Use")
+        self.topicList.addItem("File Menu")
+        self.topicList.addItem("Operations")
+        self.topicList.currentItemChanged.connect(self.displayHelp)
+
+        self.pageView = QtWidgets.QTextBrowser()
+        self.pageView.setText("Work in progress")
+
+        self.closeButton = QtWidgets.QPushButton("Close")
+        self.closeButton.clicked.connect(self.reject)
+
+        self.layout = QtWidgets.QGridLayout(self)
+        self.layout.addWidget(self.topicList, 0, 0)
+        self.layout.addWidget(self.pageView, 0, 1)
+        self.layout.addWidget(self.closeButton, 1, 1)
+        self.setWindowTitle('Help')
+
+        self.helpDict = {
+            "General Use": "General Use \n\n" +\
+                            "To start using the program, you'll want to load a file. " +\
+                            "You can do this from File > Load. \n\nIf you'd like to open additional files"+\
+                            "afterwards, you can use File > Open. \n\nDouble click in any cell to edit the data it contains. \n"+\
+                            "You can edit column names by double clicking on them. You can move columns by holding the Alt key and dragging the headers."+\
+                            "\n\nYou may reference any open tab as 'df' for use in the python code entry box.\n"+\
+                            "This means that the first tab would be df, the second df2, the third df3, etc.."+\
+                            "\n\nYou can use Cnt+Z and Cnt+Y to undo and redo, respectively."+\
+                            "\n\nWhen you're finished working and you'd like to save your file, you can do so from File > Save.",
+            "File Menu": "Load -- Clears all other open windows and opens the selected file. \n\n"+\
+                          "Open -- Opens the selected file as the newest tab. \n\n"+\
+                          "Save -- Saves the visible sheet at the given location with the given name.",
+
+            "Operations": "Find and Replace -- Searches the selected area for the find text and replaces it with the replace text. Accepts Regex.. \n\n"+\
+                          "Correct Date Format -- Converts any date format to MM-DD-YYYY. \n\n"+\
+                          "Remove Non-Numeric -- Removes all alphasymbolic characters from the selected area.",
+        }
+
+    def help(self, parent=None):
+        """
+        Present knowledge to the user
+        """   
+
+        dialog = HelpModel(parent)
+        dialog.exec_()
+        return
+    
+    def displayHelp(self):
+        """
+        Gets active selection and queries dictionary for linked help text.
+        """
+        category = self.topicList.currentItem().text()
+        helpText = self.helpDict.get(category, "General Use")
+        self.pageView.setText(helpText)
+
+#endregion

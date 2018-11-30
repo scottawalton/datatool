@@ -111,7 +111,7 @@
     <addaction name="separator"/>
     <addaction name="menuSoftware"/>
    </widget>
-   <widget class="QMenu" name="menuHelp">
+   <widget class="QMenu" name="menuView">
     <property name="title">
      <string>View</string>
     </property>
@@ -129,16 +129,17 @@
     <addaction name="actionDelete"/>
     <addaction name="actionDuplicate"/>
    </widget>
-   <widget class="QMenu" name="menuHelp_2">
+   <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionHelp"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuOperations"/>
+   <addaction name="menuView"/>
    <addaction name="menuHelp"/>
-   <addaction name="menuHelp_2"/>
   </widget>
   <action name="actionExit">
    <property name="text">
@@ -317,6 +318,11 @@
   <action name="actionKickSite">
    <property name="text">
     <string>KickSite</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
    </property>
   </action>
  </widget>
