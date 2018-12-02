@@ -1,0 +1,348 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>datatool.procedures module &#8212; datatool 0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">datatool 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="datatool-procedures-module">
+<h1>datatool.procedures module<a class="headerlink" href="#datatool-procedures-module" title="Permalink to this headline">¶</a></h1>
+<p id="datatool-procedures"><strong>Parent</strong>: datatool package</p>
+<div class="section" id="module-datatool.procedures">
+<span id="methods"></span><h2>Methods<a class="headerlink" href="#module-datatool.procedures" title="Permalink to this headline">¶</a></h2>
+<p>Commonly used procedures are kept here to keep code clean
+as well as make life easier.</p>
+<dl class="function">
+<dt id="datatool.procedures.closest_date">
+<code class="descclassname">datatool.procedures.</code><code class="descname">closest_date</code><span class="sig-paren">(</span><em>series</em>, <em>date=Timestamp('2018-12-01 23:41:17.558677')</em>, <em>period='future'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.closest_date" title="Permalink to this definition">¶</a></dt>
+<dd><p>Chooses the date closest to the given date in a given pandas series in the given direction.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param series:</th><td class="field-body">A pandas series of dates, or dates in string format</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param date:</th><td class="field-body">The date to find the nearest value from. Defaults to today.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">param period:</th><td class="field-body">The direction to search for nearest date in.
+Can either be ‘past’ or ‘future’.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Nearest date to given date as a string.</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.csv_from_excel">
+<code class="descclassname">datatool.procedures.</code><code class="descname">csv_from_excel</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.csv_from_excel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts all xls files at the given path to CSV files and outputs them into a directory named after the file.
+If the xls file has sheets, those are also outputted to the new directory.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">param path=os.getcwd(:</th></tr>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body">The path to the xls file(s).</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.drop_quote_rows">
+<code class="descclassname">datatool.procedures.</code><code class="descname">drop_quote_rows</code><span class="sig-paren">(</span><em>df</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.drop_quote_rows" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates over a dataframe and drops all rows that contain quotes as part of the string.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Pandas DataFrame</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.fix_dates">
+<code class="descclassname">datatool.procedures.</code><code class="descname">fix_dates</code><span class="sig-paren">(</span><em>df</em>, <em>column=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.fix_dates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts almost any date format to MM/DD/YYYY.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param column:</th><td class="field-body">The column to convert dates on. (accepts lists)</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Pandas DataFrame</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.fix_ranks">
+<code class="descclassname">datatool.procedures.</code><code class="descname">fix_ranks</code><span class="sig-paren">(</span><em>df</em>, <em>ranks='Current Ranks'</em>, <em>programs='Programs'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.fix_ranks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Distributes values in ranks column into columns created based on unique values in programs column.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param ranks:</th><td class="field-body">The values that need to be distributed.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">param programs:</th><td class="field-body">The values to create columns of.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Pandas DataFrame</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.load">
+<code class="descclassname">datatool.procedures.</code><code class="descname">load</code><span class="sig-paren">(</span><em>path</em>, <em>directory=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the given filename found at filepath with the preferred options.
+Accepts CSV, XLS, XLSX, HTML, and XML.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param filename:</th><td class="field-body">The name of the file.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param filepath:</th><td class="field-body">The path of the file.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Pandas DataFrame</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.remove_non_numeric">
+<code class="descclassname">datatool.procedures.</code><code class="descname">remove_non_numeric</code><span class="sig-paren">(</span><em>df</em>, <em>column='Phone'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.remove_non_numeric" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Removes everything but numeric characters from phone column.</dt>
+<dd><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param column:</th><td class="field-body">The column to perform the operation on. (accepts lists)</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">return:</th><td class="field-body">Pandas DataFrame</td>
+</tr>
+</tbody>
+</table>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.split_emails">
+<code class="descclassname">datatool.procedures.</code><code class="descname">split_emails</code><span class="sig-paren">(</span><em>df</em>, <em>column</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.split_emails" title="Permalink to this definition">¶</a></dt>
+<dd><p>Splits the comma separated values in the emails column into a maximum of 3 different columns.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param column:</th><td class="field-body">The column to split.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">return:</th><td class="field-body">Pandas DataFrame</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.split_phones">
+<code class="descclassname">datatool.procedures.</code><code class="descname">split_phones</code><span class="sig-paren">(</span><em>df</em>, <em>column</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.split_phones" title="Permalink to this definition">¶</a></dt>
+<dd><p>Distributes the values in the phones column based on the identifier
+given in parentheses into either Home, Mobile, or Work.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param phones:</th><td class="field-body">The column with phones to split.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">return:</th><td class="field-body">Pandas DataFrame</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.strip_whitespace">
+<code class="descclassname">datatool.procedures.</code><code class="descname">strip_whitespace</code><span class="sig-paren">(</span><em>df</em>, <em>column=None</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.strip_whitespace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes all leading and trailing whitespace. Replaces all newlines,
+carriage returns, and invisible tab-breaks with a space.</p>
+<p>If a column isn’t specified, it acts on the entire dataframe.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param column:</th><td class="field-body">The column to perform the operation on. (accepts lists)</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Pandas DataFrame</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.procedures.tidy_split">
+<code class="descclassname">datatool.procedures.</code><code class="descname">tidy_split</code><span class="sig-paren">(</span><em>df</em>, <em>column='Members'</em>, <em>sep='</em>, <em>'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.procedures.tidy_split" title="Permalink to this definition">¶</a></dt>
+<dd><p>Splits a column of comma separated values into their own rows with values
+identical to the original.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param df:</th><td class="field-body">The dataframe to perform the operation on.</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">param column=’Members’:</th></tr>
+<tr class="field-even field"><td>&#160;</td><td class="field-body">The column of values to split.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">param sep=’ ‘:</th><td class="field-body">The separator</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<dl class="docutils">
+<dt>Returns:</dt>
+<dd>Pandas DataFrame</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">datatool.procedures module</a><ul>
+<li><a class="reference internal" href="#module-datatool.procedures">Methods</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/datatool.procedures.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">datatool 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Scott Walton.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.1.
+    </div>
+  </body>
+</html>

@@ -1,10 +1,8 @@
 import os
-import sys
 import random
 import string as st
 
 import pandas as pd
-import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 import procedures
@@ -14,9 +12,9 @@ class PandasTable(QtCore.QAbstractTableModel):
     An instance of a pandas dataframe that can be displayed in a PyQt TableView,
     as well as have procedures applied to it. It requires a dataframe to be initialized.
 
-        :param data: 
+        :param data:
             The pandas dataframe you wish to load in
-    """   
+    """
 
     #region Constructor
     def __init__(self, data, parent=None):
@@ -36,27 +34,27 @@ class PandasTable(QtCore.QAbstractTableModel):
 
     def columnCount(self, parent):
         return len(self.df.columns)
-    
+
     def data(self, index, role):
         """
         This is called whenever a layoutChanged or dataChanged signal is emitted.
         Returns the data stored in the df attribute at the given index.
 
-            :param index: 
+            :param index:
                 Passed to us by the TableView, a PyQt QModelIndex
-            :param role: 
+            :param role:
                 Passed to us by the TableView, a Qt.DisplayRole
-        """   
+        """
 
         if role == QtCore.Qt.DisplayRole:
             row = index.row()
             column = index.column()
-            value = self.df.iat[row, column] 
+            value = self.df.iat[row, column]
             if pd.isnull(value):
                 return str('')
             else:
                 return str(value)
-    
+
     def flags(self, index):
         return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
@@ -65,14 +63,14 @@ class PandasTable(QtCore.QAbstractTableModel):
         Interprets the data we enter when we submit data through the TableView.
         Appends a state to the stack.
 
-            :param index: 
+            :param index:
                 A QIndexModel specifying the coordinates of the changed cell.
-            :param value: 
+            :param value:
                 A QItemModel storing the new data.
-            :param role=QtCore.Qt.EditRole: 
+            :param role=QtCore.Qt.EditRole:
                 The role of the passed signal.
-        """   
-        
+        """
+
         if role == QtCore.Qt.EditRole:
             col = index.column()
             row = index.row()
@@ -83,7 +81,7 @@ class PandasTable(QtCore.QAbstractTableModel):
                 return True
             except:
                 return False
-    
+
     def headerData(self, section, orientation, role):
         if role == QtCore.Qt.DisplayRole:
             if orientation == QtCore.Qt.Horizontal:
@@ -107,7 +105,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.stateStackCurrent += 1
         else:
             self.stateStackCurrent += 1
-            self.stateStack = self.stateStack[:self.stateStackCurrent]    
+            self.stateStack = self.stateStack[:self.stateStackCurrent]
             self.stateStack.append(self.df.copy())
 
     def backwardState(self):
@@ -116,7 +114,7 @@ class PandasTable(QtCore.QAbstractTableModel):
         # If it isn't, we add it to the stack
         if self.stateStackCurrent == len(self.stateStack) -1 and not \
                 self.stateStack[self.stateStackCurrent].equals(self.df):
-            self.appendState() 
+            self.appendState()
             self.stateStackCurrent -= 1
             self.df = self.stateStack[self.stateStackCurrent].copy()
             self.layoutChanged.emit()
@@ -127,7 +125,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.layoutChanged.emit()
 
         else:
-            self.parent.window().notifyUser( "Already at earliest change." )
+            self.parent.window().notifyUser("Already at earliest change.")
             self.layoutChanged.emit()
 
     def forwardState(self):
@@ -149,15 +147,15 @@ class PandasTable(QtCore.QAbstractTableModel):
         Deletes the selected columns/rows from the table.
         Adds a state to the Undo/Redo stack and refreshes the view upon success.
 
-            :param selectionModel: 
+            :param selectionModel:
                 The current selection, supplied in a QItemSelectionModel
         """
 
 
-        cols, rows = self.translateSelection(selectionModel)       
+        cols, rows = self.translateSelection(selectionModel)
 
-        # If columns are selected, do the operation on each of them, 
-        if cols != None:
+        # If columns are selected, do the operation on each of them,
+        if cols is not None:
 
             # python pandas method to drop the columns
             self.df = self.df.drop(cols, axis=1)
@@ -166,14 +164,14 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.appendState()
 
         # otherwise: check if rows are selected
-        elif rows != None:
+        elif rows is not None:
 
             self.df = self.df.drop(rows)
             self.df = self.df.reset_index(drop=True)
             self.layoutChanged.emit()
             selectionModel.clear()
             self.appendState()
-        
+
         else:
             self.parent.window().notifyUser("No columns or rows selected.")
 
@@ -181,7 +179,7 @@ class PandasTable(QtCore.QAbstractTableModel):
         """
         Translates a selection model into column labels and row indexes.
 
-            :param selectionModel: 
+            :param selectionModel:
                 A QItemSelectionModel
 
 
@@ -198,7 +196,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             for i in selectionColumns:
                 # gets the name of the column and appends it to the list
                 colNames.append(self.df.columns.values[i.column()])
-            
+
             return colNames, None
         if selectionRows != []:
             # loops through all selected rows
@@ -206,10 +204,10 @@ class PandasTable(QtCore.QAbstractTableModel):
             for i in selectionRows:
                 # append it to the list
                 rowIndexes.append(i.row())
-            
+
             return None, rowIndexes
-        else:
-            return None, None
+
+        return None, None
 
     def insertBlank(self, selectionModel):
         """
@@ -218,14 +216,14 @@ class PandasTable(QtCore.QAbstractTableModel):
 
         columns, rows = self.translateSelection(selectionModel)
 
-        if rows != None:
+        if rows is not None:
             rowMaxIndex = max(rows) + .5
             row = pd.DataFrame(columns=self.df.columns.values, index=[rowMaxIndex])
             self.df = self.df.append(row, ignore_index=False)
             self.df = self.df.sort_index().reset_index(drop=True)
             self.appendState()
-        
-        if columns != None:
+
+        if columns is not None:
             if len(columns) > 1:
                 colMaxIndex = 0
                 for x in columns:
@@ -236,11 +234,11 @@ class PandasTable(QtCore.QAbstractTableModel):
                 colMaxIndex = int(((self.df.columns == columns[0]).nonzero())[0][0])
 
             try:
-                colName = str(random.choice(st.ascii_letters)) 
+                colName = str(random.choice(st.ascii_letters))
                 self.df.insert(loc=colMaxIndex + 1, value=pd.Series(), column=colName)
                 self.appendState()
             except ValueError:
-                colName = str(random.choice(st.ascii_letters.pop(colName))) 
+                colName = str(random.choice(st.ascii_letters.pop(colName)))
                 self.df.insert(loc=colMaxIndex + 1, value=pd.Series(), column=colName)
                 self.appendState()
 
@@ -253,14 +251,14 @@ class PandasTable(QtCore.QAbstractTableModel):
 
         columns, rows = self.translateSelection(selectionModel)
 
-        if rows != None:
+        if rows is not None:
             rowMaxIndex = max(rows) + .5
             row = self.df.ix[rows]
             self.df = self.df.append(row, ignore_index=False)
             self.df = self.df.sort_index().reset_index(drop=True)
             self.appendState()
-        
-        if columns != None:
+
+        if columns is not None:
             if len(columns) > 1:
                 colMaxIndex = 0
                 for x in columns:
@@ -271,11 +269,11 @@ class PandasTable(QtCore.QAbstractTableModel):
                 colMaxIndex = int(((self.df.columns == columns[0]).nonzero())[0][0])
 
             try:
-                colName = str(random.choice(st.ascii_letters)) 
+                colName = str(random.choice(st.ascii_letters))
                 if len(columns) > 1:
                     for i in columns:
-                        colName =  '_' + i
-                        self.df.insert(loc=colMaxIndex + 1, value=self.df[i],  column=colName)
+                        colName = '_' + i
+                        self.df.insert(loc=colMaxIndex + 1, value=self.df[i], column=colName)
                     self.appendState()
             except:
                 pass
@@ -284,21 +282,22 @@ class PandasTable(QtCore.QAbstractTableModel):
 
     def clearWhitespace(self, selectionModel):
         """
-        Removes all newlines, leading and trailing whitespace, carriage returns, and invisible tab-breaks from the selected column(s).
+        Removes all newlines, leading and trailing whitespace, carriage returns, and invisible
+        tab-breaks from the selected column(s).
         If no columns are selected, acts on entire dataframe. \n
         Adds a state to the Undo/Redo stack and refreshes the view upon success.
         """
 
-        selection = self.translateSelection(selectionModel)       
-        # If columns are selected, do the operation on each of them, 
-        if selection[0] != None:
+        selection = self.translateSelection(selectionModel)
+        # If columns are selected, do the operation on each of them,
+        if selection[0] is not None:
             procedures.strip_whitespace(self.df, column=selection[0])
             self.appendState()
         # otherwise: do it on the entire dataframe
         else:
             self.df = procedures.strip_whitespace(self.df)
             self.appendState()
-        
+
         selectionModel.clear()
 
     def removeNonNumeric(self, selectionModel):
@@ -310,8 +309,8 @@ class PandasTable(QtCore.QAbstractTableModel):
 
         selection = self.translateSelection(selectionModel)
 
-        # If columns are selected, do the operation on each of them, 
-        if selection[0] != None:
+        # If columns are selected, do the operation on each of them,
+        if selection[0] is not None:
             procedures.remove_non_numeric(self.df, selection[0])
             self.appendState()
         # otherwise: let the user know they need to select a column
@@ -326,31 +325,31 @@ class PandasTable(QtCore.QAbstractTableModel):
         A column selection is required; user is alerted upon failure to select a column. \n
         Adds a state to the Undo/Redo stack and refreshes the view upon success.
         """
-        
+
         selection = self.translateSelection(selectionModel)
 
-        if selection[0] != None:
+        if selection[0] is not None:
             procedures.fix_dates(self.df, selection[0])
             self.appendState()
         else:
             self.parent.window().notifyUser("No column selected.")
 
         selectionModel.clear()
-    
+
     def ranksByPrograms(self, ranks, programs):
         """
         Distributes values in ranks column into columns created based on unique values in programs column. \n
         Adds a state to the Undo/Redo stack and refreshes the view upon success.
 
-            :param ranks: 
+            :param ranks:
                 The values that need to be distributed.
-            :param programs: 
+            :param programs:
                 The values to create columns of.
         """
 
         if ranks == '' or programs == '':
             self.parent.window().notifyUser("One or more of the selections are invalid.")
-        
+
         elif ranks is None or programs is None:
             pass
 
@@ -366,9 +365,9 @@ class PandasTable(QtCore.QAbstractTableModel):
 
         Adds a state to the Undo/Redo stack and refreshes the view upon success.
 
-            :param findText: 
+            :param findText:
                 The text to search for.
-            :param replaceText: 
+            :param replaceText:
                 The text to replace the found text with.
 
         If no selection is given, it will prompt if you wish to apply to the entire dataframe.
@@ -377,7 +376,7 @@ class PandasTable(QtCore.QAbstractTableModel):
         selection = self.translateSelection(selectionModel)
 
         if findText is None and replaceText is None:
-            return        
+            return
 
         if selection[0] is not None:
             for col in selection[0]:
@@ -385,7 +384,7 @@ class PandasTable(QtCore.QAbstractTableModel):
             self.appendState()
         else:
             # TODO: This should all be passed to the Controller. Needs revision.
-            reply = QtWidgets.QMessageBox.question(self.parent, 'No Columns Selected', \
+            reply = QtWidgets.QMessageBox.question(self.parent, 'No Columns Selected',
                 'There are no selected columns. Would you like to apply this operation to the entire sheet?',
                 QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
@@ -410,7 +409,7 @@ class PandasTable(QtCore.QAbstractTableModel):
 
         if separator is None:
             return
-        
+
         self.df = procedures.tidy_split(self.df, column, separator)
         self.appendState()
 
@@ -436,13 +435,13 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
         self.line.editingFinished.connect(self.doneEditing)
         self.sectionPressed.connect(self.handlePressed)
         self.sectionMoved.connect(self.handleMoved)
-    
+
     def handleMoved(self, logical, visualOld, visualNew):
         """
         Changes order of columns in underlying model to match the visual appearance
-        """   
+        """
         self.setSectionsMovable(False)
-        cols  = list(self.model().df.columns.values)
+        cols = list(self.model().df.columns.values)
 
         cols[logical], cols[visualNew] = cols[visualNew], cols[logical]
 
@@ -457,7 +456,7 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
         modifier = QtGui.QGuiApplication.keyboardModifiers()
         if modifier == QtCore.Qt.AltModifier:
             self.setSectionsMovable(True)
- 
+
     def doneEditing(self):
         """
         Called when the user presses Enter in the QLineEdit
@@ -479,13 +478,13 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
                 self.parentWidget().setFocus()
             else:
                 self.window().notifyUser('Column name already exists.')
- 
-    def editHeader(self,section):
+
+    def editHeader(self, section):
         """
         Makes the existing QLineEdit visible and changes the geometry to fit the header cell.
         Called when the user double clicks a header cell.
 
-            :param section: 
+            :param section:
                 The index of the header cell
         """
 
@@ -494,7 +493,7 @@ class PandaTableHorizontalHeader(QtWidgets.QHeaderView):
         edit_geometry.setWidth(self.sectionSize(section))
         edit_geometry.moveLeft(self.sectionViewportPosition(section))
         self.line.setGeometry(edit_geometry)
- 
+
         self.line.setText(self.model().df.columns.values[section])
         self.line.setHidden(False)
         self.line.setFocus()
@@ -511,7 +510,7 @@ class RanksByProgramsDialogBox(QtWidgets.QDialog):
     def __init__(self, pandaTable, parent):
         """
         Initializes the UI and sets the two dropdowns to display column names of the active Panda.
-        """   
+        """
 
         QtWidgets.QDialog.__init__(self)
 
@@ -538,7 +537,7 @@ class RanksByProgramsDialogBox(QtWidgets.QDialog):
     def getResults(self, parent=None):
         """
         Returns the user's input
-        """   
+        """
 
         dialog = RanksByProgramsDialogBox(self.df, parent)
         result = dialog.exec_()
@@ -555,7 +554,7 @@ class NewRowsOnSeparatorDialogBox(QtWidgets.QDialog):
     def __init__(self, pandaTable, parent):
         """
         Initializes the UI and sets the two dropdowns to display column names of the active Panda.
-        """   
+        """
 
         QtWidgets.QDialog.__init__(self)
 
@@ -581,7 +580,7 @@ class NewRowsOnSeparatorDialogBox(QtWidgets.QDialog):
     def getResults(self, parent=None):
         """
         Returns the user's input
-        """   
+        """
 
         dialog = NewRowsOnSeparatorDialogBox(self.df, parent)
         result = dialog.exec_()
@@ -596,11 +595,11 @@ class FindAndReplaceDialogBox(QtWidgets.QDialog):
     """
 
     # TODO: Add Find only option
-    
+
     def __init__(self, parent):
         """
         Initializes the UI and sets the properties.
-        """   
+        """
 
         QtWidgets.QDialog.__init__(self)
 
@@ -623,14 +622,14 @@ class FindAndReplaceDialogBox(QtWidgets.QDialog):
     def getResults(self, parent=None):
         """
         Returns the user's input
-        """   
+        """
 
         dialog = FindAndReplaceDialogBox(parent)
         result = dialog.exec_()
         if result == QtWidgets.QDialog.Accepted:
-            return dialog.findText.text() , dialog.replaceText.text()
-        else:
-            return None, None
+            return dialog.findText.text(), dialog.replaceText.text()
+
+        return None, None
 
 #endregion
 
@@ -645,7 +644,7 @@ class RainmakerDialogBox(QtWidgets.QDialog):
     def __init__(self, parent):
         """
         Initializes the UI and sets the properties.
-        """   
+        """
 
         QtWidgets.QDialog.__init__(self)
 
@@ -681,14 +680,25 @@ class RainmakerDialogBox(QtWidgets.QDialog):
         self.custom = None
 
     def getMain(self):
+        """
+        Prompts the user for the main export file (provided by RM)
+        """
         self.main = QtWidgets.QFileDialog.getOpenFileName(self, 'Select File', os.getcwd(), 'All Support Files (*.xls *.csv *.xlsx)')
         self.mainExportLine.setText(self.main[0])
 
     def getParent(self):
+        """
+        Prompts the user for the Parents Names export file.
+        (expected to only contain ID and Parents Names)
+        """
         self.parent = QtWidgets.QFileDialog.getOpenFileName(self, 'Select File', os.getcwd(), 'All Support Files (*.xls *.csv *.xlsx)')
         self.parentsNamesLine.setText(self.parent[0])
 
     def getCustom(self):
+        """
+        Prompts the user for the Custom Fields export file.
+        (expected to only contain ID and Custom Fields)
+        """
         self.custom = QtWidgets.QFileDialog.getOpenFileName(self, 'Select File', os.getcwd(), 'All Support Files (*.xls *.csv *.xlsx)')
         self.customFieldsLine.setText(self.custom[0])
 
@@ -704,8 +714,8 @@ class RainmakerDialogBox(QtWidgets.QDialog):
                 return dialog.main[0], dialog.parent[0], None
             elif dialog.main is not None and dialog.parent is None and dialog.custom is None:
                 return dialog.main[0], None, None
-        else:
-            return None, None, None
+
+        return None, None, None
 
 #endregion
 
@@ -719,7 +729,7 @@ class HelpModel(QtWidgets.QDialog):
     def __init__(self, parent=None):
         """
         Initializes the UI and sets the properties.
-        """   
+        """
 
         QtWidgets.QDialog.__init__(self)
         self.resize(1000, 700)
@@ -765,12 +775,12 @@ class HelpModel(QtWidgets.QDialog):
     def help(self, parent=None):
         """
         Present knowledge to the user
-        """   
+        """
 
         dialog = HelpModel(parent)
         dialog.exec_()
         return
-    
+
     def displayHelp(self):
         """
         Gets active selection and queries dictionary for linked help text.

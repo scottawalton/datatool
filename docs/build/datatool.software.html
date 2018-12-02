@@ -1,0 +1,174 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>datatool.software module &#8212; datatool 0.1.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">datatool 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="datatool-software-module">
+<h1>datatool.software module<a class="headerlink" href="#datatool-software-module" title="Permalink to this headline">¶</a></h1>
+<p id="datatool-software"><strong>Parent</strong>: datatool package</p>
+<div class="section" id="module-datatool.software">
+<span id="methods"></span><h2>Methods<a class="headerlink" href="#module-datatool.software" title="Permalink to this headline">¶</a></h2>
+<p>Fully automated cleaning of exports from various softwares.</p>
+<p>Created by: Scott Walton</p>
+<dl class="function">
+<dt id="datatool.software.ASF_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">ASF_fix</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em>, <em>key='ASF ACCT#'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.ASF_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of ASF export files.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.CW_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">CW_fix</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em>, <em>key='RecordName'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.CW_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of PerfectMind’s free export files.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.KS_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">KS_fix</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.KS_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of exports from KickSite.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.MB_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">MB_fix</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em>, <em>key='MBSystemID'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.MB_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of MindBody’s paid export.
+Needs expansion to handle the free one.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.MS_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">MS_fix</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em>, <em>holder='students'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.MS_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of exports from Member Solutions.</p>
+<p>Note: This is the most well done fix and should be used as an example.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.PM_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">PM_fix</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em>, <em>key='RecordName'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.PM_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of PerfectMind’s paid export files.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.RM_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">RM_fix</code><span class="sig-paren">(</span><em>path</em>, <em>parents=None</em>, <em>date=Timestamp('2018-12-01 23:45:27.376564')</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.RM_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of exports from Rainmaker.
+Returns the file and outputs it to the current working directory.</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">param path:</th><td class="field-body">Full path to the Rainmaker export.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">param date:</th><td class="field-body">The date the export was pulled from Rainmaker.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">param parents:</th><td class="field-body">Path to Parents’ Names export file.</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.ZP_fix">
+<code class="descclassname">datatool.software.</code><code class="descname">ZP_fix</code><span class="sig-paren">(</span><em>path='/home/vesi/documents/bin/datatool/docs'</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.ZP_fix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fully automated cleaning of exports from ZenPlanner.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="datatool.software.merge_KS_SP">
+<code class="descclassname">datatool.software.</code><code class="descname">merge_KS_SP</code><span class="sig-paren">(</span><em>kicksiteFile</em>, <em>solupayFile</em>, <em>checkLast=False</em><span class="sig-paren">)</span><a class="headerlink" href="#datatool.software.merge_KS_SP" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">datatool.software module</a><ul>
+<li><a class="reference internal" href="#module-datatool.software">Methods</a></li>
+</ul>
+</li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/datatool.software.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">datatool 0.1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, Scott Walton.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.1.
+    </div>
+  </body>
+</html>
