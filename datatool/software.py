@@ -871,10 +871,6 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
                         ascending=[True, False, False, False, False], inplace=True)
         fin = fin.groupby('RecordName', as_index=False).nth(0)
 
-        fin['Payment Method'] = np.where(mem['Billing Company'] =='In House','In House',
-                                            np.where(mem['Billing Company'] == 'PIF','PIF',
-                                                np.where(fin['AccountNumber'].notnull(),'EFT',
-                                                        np.where(fin['CreditCardNumber'].notnull(),'CC', ''))))
 
     #endregion
 
@@ -888,6 +884,10 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
             x.set_index('RecordName')
             complete = pd.merge(complete, x, on=key, how='left')
 
+    complete['Payment Method'] = np.where(complete['Billing Company'] =='In House','In House',
+                                        np.where(complete['Billing Company'] == 'PIF','PIF',
+                                            np.where(complete['AccountNumber'].notnull(),'EFT',
+                                                    np.where(complete['CreditCardNumber'].notnull(),'CC', ''))))
     #endregion
 
     #region Output Files
@@ -1055,7 +1055,7 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
                         (np.logical_or(df['On Trial'] == 'TRUE', df['On Trial'] == '1')),\
                                                          'T', df['Contact Type'])
 
-    replacements = {'ON HOLD': 'autoCharge','autoCollect': 'autoCharge', 'autoCollect_ONHOLD': 'autoCharge'}
+    replacements = {'ON HOLD': 'autoCharge','AutoCollect': 'autoCharge','autoCollect': 'autoCharge', 'autoCollect_ONHOLD': 'autoCharge'}
     df['Billing Company'].replace(replacements, inplace=True)
 
     df['Billing Company'] = np.where((df['Payment Method'] == 'In House') & (df['Billing Company'].isnull()),
@@ -1092,13 +1092,16 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
     df['Billing Company'] = np.where(df['Billing Company'] == 'Family Membership', 
                                          'PIF', df['Billing Company'])
 
+    df['Payment Frequency'] = np.where((df['Billing Company'].notnull()) & (df['Payment Frequency'].isnull()), 
+                                         '30', df['Payment Frequency'])
     # New export format lists every Contact with a renewal twice - this consolidates them into one.
+    problems = pd.DataFrame(columns=df.columns.values)
     original_sort = df.index
     master_drop = []
     df = df.ix[pd.to_datetime(df['Current Program Start Date']).sort_values().index]
     for index, group in df.groupby('Id', as_index=False):
         group = group[group['Contact Type'] == 'S']
-        if len(group.index.values) > 1:
+        if len(group.index.values) > 1 and group['Current Program'].nunique() == 1:
             group = group.ix[pd.to_datetime(group['Current Program Start Date']).sort_values().index]
             group_earliest_start_date = group['Current Program Start Date'].head(1)
             group = group.ix[pd.to_datetime(group['Current Program Expires']).sort_values(ascending=False).index]
@@ -1119,6 +1122,8 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
                 for i in drop_rows:
                     if i not in master_drop:
                         master_drop.append(i)
+        if len(group.index.values) > 1 and group['Current Program'].nunique() != 1:
+            problems = problems.append(group)
 
     df = df.reindex(original_sort)
     df.drop(df.index[master_drop], inplace=True)
@@ -1140,6 +1145,7 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
 
     #region Output
     df.to_csv('clean_' + 'RM' + '.csv', index=False, quoting=1)
+    problems.to_csv('needs_to_be_merged_' + 'RM' + '.csv', index=False, quoting=1)
     return df
     #endregion
 
