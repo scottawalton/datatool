@@ -12,6 +12,10 @@ Currently has full support for exports from the following sofwares:
 	- RainMaker
 	- ZenPlanner
 
-For all other data, I've made operations to deal with common problems you will encounter when cleaning it. 
+For all other data, I've made operations to deal with common problems you will encounter when cleaning it.
 
-datatool is cross-platform and prefers CSV files.
+datatool is cross-platform and supports CSV and Excel files.
+
+<h3>Contributions:</h3>
+
+Due to PyQt's use of CamelCase, the GUI files use mixedCase for functions and CamelCase for classes.
