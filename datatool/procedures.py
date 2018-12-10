@@ -180,7 +180,8 @@ def remove_non_numeric(df, column='Phone'):
 
     if isinstance(column, list):
         for x in column:
-            df[x] = df[x].replace(r'[^0-9]', '', regex=True)
+            if x in df.columns.values:
+                df[x] = df[x].replace(r'[^0-9]', '', regex=True)
         return df
     else:
         df[column] = df[column].replace(r'[^0-9]', '', regex=True)

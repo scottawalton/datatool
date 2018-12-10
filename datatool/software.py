@@ -234,6 +234,8 @@ def KS_fix(path=os.getcwd()):
 
         billing = billing[pd.notnull(billing['Billable first name'])]
         billing['Members'] = billing['Billable first name'] + ' ' + billing['Billable last name']
+        billing['Members'] = billing['Members'].str.replace(r'\s\s', r' ')
+        billing['Members'] = billing['Members'].str.strip()
 
         if not fam.empty:
             fam_billing = billing[pd.isnull(billing['Billable first name'])]
@@ -775,6 +777,7 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     # only done to files that are not 100% necessary
     fin = pd.DataFrame()
     ranks = pd.DataFrame()
+    mem = pd.DataFrame()
 
     for i in files:
 
@@ -810,13 +813,15 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     con['Type'].replace({'Lead': 'P', 'Former student':"F", 'Active student': 'S'}, inplace=True)
     con['PrimaryPhone'].replace({'Primary Phone': 'Mobile', 'Home ': 'Home'}, inplace=True)
     procedures.fix_ranks(con, ranks='PrimaryNumber', programs='PrimaryPhone')
-    procedures.fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
-    con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber'], axis=1, inplace=True)
+    if "SecondaryNumber" in con.columns.values:
+        procedures.fix_ranks(con, ranks='SecondaryNumber', programs='SecondaryPhone')
+    con.drop(['PrimaryNumber', 'PrimaryPhone', 'SecondaryPhone', 'SecondaryNumber'], axis=1, inplace=True, errors='ignore')
     procedures.remove_non_numeric(con, ['Work', 'Mobile', 'Home'])
 
     con.rename(columns={'BecameLead': 'Date Added', 'PerfectScanID': 'Alternate ID (Scan)', 'CampaignName': 'Source'}, inplace=1)
 
-    con['Source'] = np.where((con['Source'].isnull()) & (con['ReferedBy'].notnull()), 'Referral', con['Source'])
+    if "ReferedBy" in con.columns.values:
+        con['Source'] = np.where((con['Source'].isnull()) & (con['ReferedBy'].notnull()), 'Referral', con['Source'])
 
     #endregion
 
@@ -839,23 +844,24 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
     #endregion
 
     #region Memberships
-    mem.rename(columns={'ContactRecord': 'RecordName', 'PaymentPattern': 'Frequency',
-                        'Processor': 'Billing Company'}, inplace=True)
+    if not mem.empty:
+        mem.rename(columns={'ContactRecord': 'RecordName', 'PaymentPattern': 'Frequency',
+                            'Processor': 'Billing Company'}, inplace=True)
 
-    mem.drop(['Finance Info Record', 'Transaction Record', 'TotalAmount', 'RemainingBalance', 'DelinquentAmount',
-    'OnHold', 'FirstPayment', 'FinalPayment', 'Ongoing', 'SubTotal', 'TAXONE', 'Tax', 'DelinquentSince',
-    'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays', 'LastName',
-    'FirstName', 'NextPaymentAmount', 'CancellationDate','Notes'], axis=1, inplace=True, errors='ignore')
+        mem.drop(['Finance Info Record', 'Transaction Record', 'TotalAmount', 'RemainingBalance', 'DelinquentAmount',
+        'OnHold', 'FirstPayment', 'FinalPayment', 'Ongoing', 'SubTotal', 'TAXONE', 'Tax', 'DelinquentSince',
+        'ForfeitedAmount', 'ResumeDate', 'Renewal', 'SessionsPurchased', 'DownPayment', 'DurationDays', 'LastName',
+        'FirstName', 'NextPaymentAmount', 'CancellationDate','Notes'], axis=1, inplace=True, errors='ignore')
 
-    # sort down to most recent active membership
-    mem.sort_values(['RecordName', 'MembershipStatus', 'Membership Activate'],ascending=[True, True, False], inplace=True)
-    mem = mem.groupby('RecordName', as_index=False).nth(0)
+        # sort down to most recent active membership
+        mem.sort_values(['RecordName', 'MembershipStatus', 'Membership Activate'],ascending=[True, True, False], inplace=True)
+        mem = mem.groupby('RecordName', as_index=False).nth(0)
 
-    mem['Billing Company'].replace({'Billing Direct': 'autoCharge', 'In-House': "In House"}, inplace=True)
-    mem['Frequency'].replace({'Monthly': '30', 'Paid In Full': '0'}, inplace=True)
-    mem['Billing Company'] = np.where((mem['Transaction Status'] == 'Completed') & (mem['MembershipStatus'] == 'Active'),
-                                    'PIF', mem['Billing Company'])
-    mem['Membership Expiry'] = np.where(mem['Membership Expiry'].isnull(), '12-31-2099', mem['Membership Expiry'])
+        mem['Billing Company'].replace({'Billing Direct': 'autoCharge', 'In-House': "In House"}, inplace=True)
+        mem['Frequency'].replace({'Monthly': '30', 'Paid In Full': '0'}, inplace=True)
+        mem['Billing Company'] = np.where((mem['Transaction Status'] == 'Completed') & (mem['MembershipStatus'] == 'Active'),
+                                        'PIF', mem['Billing Company'])
+        mem['Membership Expiry'] = np.where(mem['Membership Expiry'].isnull(), '12-31-2099', mem['Membership Expiry'])
     #endregion
 
     #region Financials
@@ -884,10 +890,19 @@ def PM_fix(path=os.getcwd(), key='RecordName'):
             x.set_index('RecordName')
             complete = pd.merge(complete, x, on=key, how='left')
 
-    complete['Payment Method'] = np.where(complete['Billing Company'] =='In House','In House',
-                                        np.where(complete['Billing Company'] == 'PIF','PIF',
-                                            np.where(complete['AccountNumber'].notnull(),'EFT',
-                                                    np.where(complete['CreditCardNumber'].notnull(),'CC', ''))))
+    # Billing Companies and Payment Methods
+    if not mem.empty:
+        try:
+            complete['Payment Method'] = np.where(complete['Billing Company'] =='In House','In House',
+                                                np.where(complete['Billing Company'] == 'PIF','PIF',
+                                                    np.where((complete['AccountNumber'].notnull()) & (complete['AccountNumber'] != ''),'EFT',
+                                                            np.where(complete['CreditCardNumber'].notnull(),'CC', ''))))
+        except KeyError:
+            complete['Payment Method'] = np.where(complete['Billing Company'] =='In House','In House',
+                                                np.where(complete['Billing Company'] == 'PIF','PIF',
+                                                        np.where(complete['Billing Company'].notnull(),'In House', '')))
+
+            complete['Billing Company'] = np.where(complete['Payment Method'] =='In House','In House',complete['Billing Company'])
     #endregion
 
     #region Output Files
@@ -1026,12 +1041,14 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
 
     try:
         df = procedures.load(path)
+        _, filename = os.path.split(path)
+        filename, _ = os.path.splitext(filename)
     except Exception:
         raise Exception
 
     if parents is not None:
-        filepath, filename = os.path.split(parents)
-        parents = procedures.load(filename, filepath)
+        parent_filepath, parent_filename = os.path.split(parents)
+        parents = procedures.load(parent_filename, parent_filepath)
 
     #endregion
 
@@ -1144,8 +1161,8 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
     #endregion
 
     #region Output
-    df.to_csv('clean_' + 'RM' + '.csv', index=False, quoting=1)
-    problems.to_csv('needs_to_be_merged_' + 'RM' + '.csv', index=False, quoting=1)
+    df.to_csv('clean_' + filename + '.csv', index=False, quoting=1)
+    problems.to_csv('needs_to_be_merged_' + filename + '.csv', index=False, quoting=1)
     return df
     #endregion
 
@@ -1285,7 +1302,9 @@ def ZP_fix(path=os.getcwd()):
     'Tracking Source','Tracking Name','Tracking Medium','Tracking Keywords', 'Primary Location','Signup Fee?',
     'Autopay Account','Autopay Approved By','Autopay Approved Date','Time','Type','Weekday','Long Date','Check In Date',
     'Date','Date / Time','BirthDate','Att.','Validated?','Primary Instructor','Prospect Priority','Prospect Status',
-    'Prospect Status (sub)','Sales Rep','Acct Name','Age','Auto Renew','Autopay Available?'], axis=1, inplace=True, errors='ignore')
+    'Prospect Status (sub)','Sales Rep','Acct Name','Age','Auto Renew','Autopay Available?', 'FullName', 'Full Name', 'Mbr. Create Date', 'InquireDate',
+    'Mbr. Status', 'Membership Category', 'Personal Status', 'Barcode', 'Family', 'Inquiry Date', 'Program', 'Program Signup Date', 'AutoPay?', 'Bill #',
+    'Bill Type', 'Create Date', 'Due Date Range', 'Due Month', 'Positive Balance Amount', 'Signup Date'], axis=1, inplace=True, errors='ignore')
 
     complete.dropna(how='all', inplace=True, axis=1)
 
