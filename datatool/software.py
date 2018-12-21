@@ -232,16 +232,16 @@ def KS_fix(path=os.getcwd()):
 
     if not billing.empty:
 
-        billing = billing[pd.notnull(billing['Billable first name'])]
-        billing['Members'] = billing['Billable first name'] + ' ' + billing['Billable last name']
-        billing['Members'] = billing['Members'].str.replace(r'\s\s', r' ')
-        billing['Members'] = billing['Members'].str.strip()
+        _billing = billing[pd.notnull(billing['Billable first name'])]
+        _billing['Members'] = _billing['Billable first name'] + ' ' + _billing['Billable last name']
+        _billing['Members'] = _billing['Members'].str.replace(r'\s\s', r' ')
+        _billing['Members'] = _billing['Members'].str.strip()
 
         if not fam.empty:
-            fam_billing = billing[pd.isnull(billing['Billable first name'])]
+            fam_billing = billing[billing['Billable first name'].isnull()]
             fam_billing.rename(columns={'Billable last name': 'Family'}, inplace=True)
             fam_billing = fam_billing.merge(fam, on='Family')
-            billing = billing.append(fam_billing, sort=False)
+            billing = _billing.append(fam_billing, sort=False)
 
         billing = billing.sort_values('Status').drop_duplicates(subset=['Members'],keep='first')
 
@@ -507,6 +507,7 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
     notes = pd.DataFrame()
     ranks = pd.DataFrame()
     cus = pd.DataFrame()
+    ind = pd.DataFrame()
 
     for i in files:
 
@@ -520,7 +521,7 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
             notes = procedures.load(filename, filepath)
             print('Found Notes file -- ' + filename)
 
-        if "CreditCards" in filename:
+        if "CreditCards" in filename or "PaymentAccounts" in filename:
             fin = procedures.load(filename, filepath)
             print('Found Credit Cards file -- ' + filename)
 
@@ -536,7 +537,7 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
             cus = procedures.load(filename, filepath)
             print('Found Custom Fields file -- ' + filename)
 
-        if "ClientIndexes" in filename:
+        if "Indexes" in filename:
             ind = procedures.load(filename, filepath)
             print('Found Ranks file -- ' + filename)
 
@@ -566,111 +567,120 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
     #endregion
 
     #region Financials
-    fin.drop(['BillingStreetAddress','BillingCity','BillingState','BillingZip', 'BarcodeID'], axis=1, inplace=True)
+    if not fin.empty:
+        fin.drop(['BillingStreetAddress','BillingCity','BillingState','BillingZip', 'BarcodeID'], axis=1, inplace=True)
 
-    fin.rename(columns={'ClientID': 'MBSystemID'}, inplace=True)
-    fin['IsSavingsAcct'] = fin['IsSavingsAcct'].map({'True':'S', 'False': 'C'})
+        fin.rename(columns={'ClientID': 'MBSystemID'}, inplace=True)
+        fin['IsSavingsAcct'] = fin['IsSavingsAcct'].map({'True':'S', 'False': 'C'})
     #endregion
 
     #region Contact Relationships
-    rel.drop(['RelationID','BarcodeID1', 'BarcodeID2'], axis=1, inplace=True)
+    if not rel.empty:
+        rel.drop(['RelationID','BarcodeID1', 'BarcodeID2'], axis=1, inplace=True)
 
-    rel.rename(columns={'MBSystemID1': 'MBSystemID'}, inplace=True)
-    rel['Relationships'] = rel['RelName1'] + ': ' + rel['FirstName2'] + ' ' + rel['LastName2']
-    rel = rel.groupby('MBSystemID').agg({'Relationships':' -- '.join}).reset_index()
+        rel.rename(columns={'MBSystemID1': 'MBSystemID'}, inplace=True)
+        rel['Relationships'] = rel['RelName1'] + ': ' + rel['FirstName2'] + ' ' + rel['LastName2']
+        rel = rel.groupby('MBSystemID').agg({'Relationships':' -- '.join}).reset_index()
     #endregion
 
     #region Custom Fields
-    cus.drop(['FirstName', 'LastName', 'BarcodeID'], axis=1, inplace=True)
-    procedures.fix_ranks(cus, ranks='CustomFieldValue', programs='CustomField')
-    for i in cus['CustomField'].unique().tolist():
-        cus = cus.groupby('MBSystemID', as_index=False).sum()
-    cus.drop(['CustomFieldValue','CustomField', 'BarcodeID','FirstName','LastName'], axis=1, inplace=True, errors='ignore')
+    if not cus.empty:
+        cus.drop(['FirstName', 'LastName', 'BarcodeID'], axis=1, inplace=True)
+        procedures.fix_ranks(cus, ranks='CustomFieldValue', programs='CustomField')
+        for i in cus['CustomField'].unique().tolist():
+            cus = cus.groupby('MBSystemID', as_index=False).sum()
+        cus.drop(['CustomFieldValue','CustomField', 'BarcodeID','FirstName','LastName'], axis=1, inplace=True, errors='ignore')
     #endregion
 
     #region Memberships
-    mem.drop(['PayerBarcodeID','PayerLastName','PayerFirstName', 'TerminationDate',
-    'RunDateTime', 'Contract Agreement Date', 'LocationName', 'AutoPayItemDescription'], axis=1, inplace=True)
+    if not mem.empty:
+        mem.drop(['PayerBarcodeID','PayerLastName','PayerFirstName', 'TerminationDate',
+        'RunDateTime', 'Contract Agreement Date', 'LocationName', 'AutoPayItemDescription'], axis=1, inplace=True, errors='ignore')
 
-    cols = mem.columns.values
-    mem['ScheduleDate'] = pd.to_datetime(mem['ScheduleDate'])
+        # For whatever reason, they have two export formats. This handles that.
+        if 'NextScheduleDate' in mem.columns.values:
+            mem.rename(columns={'NextScheduleDate': 'ScheduleDate', 'StartDate': 'Contract Start Date', 'EndDate': 'Contract End Date',
+                                'SumAmount': 'Amount'}, inplace=True)
+        mem['ScheduleDate'] = pd.to_datetime(mem['ScheduleDate'])
 
-    # ------ Super slow solution -------- open to suggestions here
-    # Grabs the closest payment entry from each of a Contact's Memberships
+        cols = mem.columns.values
 
-    new_mem = []
+        # ------ Super slow solution -------- open to suggestions here
+        # Grabs the closest payment entry from each of a Contact's Memberships
 
-    for name, group in mem.groupby('MBSystemID'):
+        new_mem = []
 
-        # group is the member
+        for name, group in mem.groupby('MBSystemID'):
 
-        for subname, subgroup in group.groupby(['Contract Start Date','Contract End Date']):
+            # group is the member
 
-            # subgroup is the membership payments
+            for subname, subgroup in group.groupby(['Contract Start Date','Contract End Date']):
 
-            tempFuture = pd.DataFrame(columns=mem.columns.values)
-            tempPast = pd.DataFrame(columns=mem.columns.values)
+                # subgroup is the membership payments
 
-            for index, row in subgroup.iterrows():
+                tempFuture = pd.DataFrame(columns=mem.columns.values)
+                tempPast = pd.DataFrame(columns=mem.columns.values)
 
-                # row is the payment
+                for index, row in subgroup.iterrows():
 
-                # Removes payments that were deleted
+                    # row is the payment
 
-                if row['ContractDeleted'] == 'True':
-                    break
+                    # Removes payments that were deleted
 
-                # Sorts the payments into future or past, based on today
-                # We do this so we can have the payment CLOSEST to today that has not passed
+                    if row['ContractDeleted'] == 'True':
+                        break
 
-                if row['ScheduleDate'].date() > datetime.date.today():
-                    tempFuture = tempFuture.append(row)
+                    # Sorts the payments into future or past, based on today
+                    # We do this so we can have the payment CLOSEST to today that has not passed
 
-                elif row['ScheduleDate'].date() < datetime.date.today():
-                    tempPast = tempPast.append(row)
+                    if row['ScheduleDate'].date() > datetime.date.today():
+                        tempFuture = tempFuture.append(row)
 
-            # Need to use if statements to see if the membership is in the future/past
+                    elif row['ScheduleDate'].date() < datetime.date.today():
+                        tempPast = tempPast.append(row)
 
-            if len(tempFuture.index) != 0:
+                # Need to use if statements to see if the membership is in the future/past
 
-                tempFuture['Payments Remaining'] = tempFuture.shape[0]
-                mostRecent = tempFuture.sort_values('ScheduleDate', ascending=True).head(1).values.tolist()
-                mostRecent = list(itertools.chain.from_iterable(mostRecent))
-                if mostRecent != []:
-                    new_mem.append(mostRecent)
+                if len(tempFuture.index) != 0:
 
-                    ## NEED TO REVIEW ^^^^
+                    tempFuture['Payments Remaining'] = tempFuture.shape[0]
+                    mostRecent = tempFuture.sort_values('ScheduleDate', ascending=True).head(1).values.tolist()
+                    mostRecent = list(itertools.chain.from_iterable(mostRecent))
+                    if mostRecent != []:
+                        new_mem.append(mostRecent)
 
-            else:
+                        ## NEED TO REVIEW ^^^^
 
-                tempFuture['Payments Remaining'] = '0'
-                mostRecent = tempPast.sort_values('ScheduleDate', ascending=False).head(1).values.tolist()
-                mostRecent = list(itertools.chain.from_iterable(mostRecent))
-                if mostRecent != []:
-                    new_mem.append(mostRecent)
+                else:
+
+                    tempFuture['Payments Remaining'] = '0'
+                    mostRecent = tempPast.sort_values('ScheduleDate', ascending=False).head(1).values.tolist()
+                    mostRecent = list(itertools.chain.from_iterable(mostRecent))
+                    if mostRecent != []:
+                        new_mem.append(mostRecent)
 
 
-    # Create new Memberships DB from New_Mem
+        # Create new Memberships DB from New_Mem
 
-    pr = ['Payments Remaining']
-    cols = np.append(cols, pr)
-    mem = pd.DataFrame(new_mem, columns=cols)
+        pr = ['Payments Remaining']
+        cols = np.append(cols, pr)
+        mem = pd.DataFrame(new_mem, columns=cols)
 
-    # -------- End slow solution -----------------------------------
+        # -------- End slow solution -----------------------------------
 
-    # Basic cleanup to make import more manageable
+        # Basic cleanup to make import more manageable
 
-    mem['Amount'] = mem['Amount'].str.replace(r'00$', '')
-    mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Credit Card', 'CC')
-    mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('ACH', 'EFT')
-    mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Debit Account', 'CC')
-    mem.drop(['ContractDeleted','RecLastname','RecFirstname', 'BarcodeID', 'AutopayDeleted'], axis=1, inplace=True)
-    mem.rename(columns={'ContractName': 'Current Program'}, inplace=True)
+        mem['Amount'] = mem['Amount'].str.replace(r'00$', '')
+        mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Credit Card', 'CC')
+        mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('ACH', 'EFT')
+        mem['PaymentMethod'] = mem['PaymentMethod'].str.replace('Debit Account', 'CC')
+        mem.drop(['ContractDeleted','RecLastname','RecFirstname', 'BarcodeID', 'AutopayDeleted'], axis=1, inplace=True, errors='ignore')
+        mem.rename(columns={'ContractName': 'Current Program'}, inplace=True)
 
-    # Get Most recent Membership by Start Date -- we can only import primary memberships at this time :(
+        # Get Most recent Membership by Start Date -- we can only import primary memberships at this time :(
 
-    mem['Contract Start Date'] = pd.to_datetime(mem['Contract Start Date'])
-    mem = mem.sort_values('Contract Start Date', ascending=False).groupby('MBSystemID').head(1)
+        mem['Contract Start Date'] = pd.to_datetime(mem['Contract Start Date'])
+        mem = mem.sort_values('Contract Start Date', ascending=False).groupby('MBSystemID').head(1)
 
     #endregion
 
@@ -683,10 +693,10 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
 
     #region Ranks
     # Indexes is how MindBody handles tags. It is also their solution to Ranks.
-
-    ind.drop(['BarcodeID', 'FirstName','LastName'], axis=1, inplace=True)
-    ind = ind[ind['IndexName'].str.contains('Belt')]
-    ind = ind[ind['IndexValue'].str.contains('Yes')]
+    if not ind.empty:
+        ind.drop(['BarcodeID', 'FirstName','LastName'], axis=1, inplace=True)
+        ind = ind[ind['IndexName'].str.contains('Belt')]
+        ind = ind[ind['IndexValue'].str.contains('Yes')]
     #endregion
 
     #region Merge
@@ -695,7 +705,8 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
     complete = con
 
     for i in needs_merge:
-        complete = pd.merge(complete, i, on='MBSystemID', how='left')
+        if not i.empty:
+            complete = pd.merge(complete, i, on='MBSystemID', how='left')
 
     #endregion
 
@@ -1023,7 +1034,7 @@ def CW_fix(path=os.getcwd(), key='RecordName'):
     
     #endregion
 
-def RM_fix(path, parents=None, date=pd.to_datetime('today')):
+def RM_fix(path, date=pd.to_datetime('today')):
     """
     Fully automated cleaning of exports from Rainmaker.
     Returns the file and outputs it to the current working directory.
@@ -1032,27 +1043,41 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
             Full path to the Rainmaker export.
         :param date:
             The date the export was pulled from Rainmaker.
-        
-        :param parents:
-            Path to Parents' Names export file.
     """
+
+    ### Rainmaker exports files in an unsupported format.
+    ### I can't find anything that supports it, so it won't be completely automated for the time being.
 
     #region Load    
 
-    try:
-        df = procedures.load(path)
-        _, filename = os.path.split(path)
-        filename, _ = os.path.splitext(filename)
-    except Exception:
-        raise Exception
+    df = procedures.load(path)
 
-    if parents is not None:
-        parent_filepath, parent_filename = os.path.split(parents)
-        parents = procedures.load(parent_filename, parent_filepath)
+    path, mainFile = os.path.split(path)
+    mainFile, _ = os.path.splitext(mainFile)
+    files = glob.glob(path + '/*.csv')
+
+    # This prevents errors about undefined variables
+    # only done to files that are not 100% necessary
+    parents = pd.DataFrame()
+    cus = pd.DataFrame()
+
+    for i in files:
+
+        filepath, filename = os.path.split(i)
+
+        if "StudentOverview" in filename:
+            cus = procedures.load(filename, filepath)
+            print('Found Custom Fields file -- ' + filename)
+
+        if 'RainMaker' in filename:
+            parents = procedures.load(filename, filepath)
+            print("Found Parents' Names file -- " + filename)
 
     #endregion
 
-    #region Clean for Importability
+    #region Main File
+
+    cols = df.columns.values.tolist()
 
     # Fix Expire Dates when dates are entered as mm/dd/yy
     for index, x in df['Current Program Expires'].iteritems():
@@ -1113,6 +1138,7 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
                                          '30', df['Payment Frequency'])
     # New export format lists every Contact with a renewal twice - this consolidates them into one.
     problems = pd.DataFrame(columns=df.columns.values)
+    problems = problems.drop(['CCN', 'Bank Routing'], axis=1)
     original_sort = df.index
     master_drop = []
     df = df.ix[pd.to_datetime(df['Current Program Start Date']).sort_values().index]
@@ -1152,17 +1178,31 @@ def RM_fix(path, parents=None, date=pd.to_datetime('today')):
     df.dropna(how='all', inplace=True)
     #endregion
 
+    #region Parents Name
+    if not parents.empty:
+        parents = parents[['ID', 'Parent Name']]
+    #endregion
+
+    #region Custom Fields
+    cols.remove('Id')
+    cus = cus.drop(cols, axis=1, errors='ignore')
+    cus.drop(list(cus.filter(regex = 'Style')), axis = 1, inplace = True)
+    #endregion
+
     #region Merge
-    if isinstance(parents, pd.DataFrame):
+    if not parents.empty:
         if 'ID' in parents.columns.values:
             parents.rename(columns={'ID': 'Id'}, inplace=True)
         df = df.merge(parents, on='Id', how='left')
         df.drop_duplicates(keep='first', inplace=True)
+
+    if not cus.empty:
+        df = df.merge(cus, on='Id', how='left')
     #endregion
 
     #region Output
-    df.to_csv('clean_' + filename + '.csv', index=False, quoting=1)
-    problems.to_csv('needs_to_be_merged_' + filename + '.csv', index=False, quoting=1)
+    df.to_csv('clean_' + mainFile + '.csv', index=False, quoting=1)
+    problems.to_csv('needs_to_be_merged_' + mainFile + '.csv', index=False, quoting=1)
     return df
     #endregion
 
@@ -1175,6 +1215,8 @@ def ZP_fix(path=os.getcwd()):
 
     path = path + '/*.csv'
     files = glob.glob(path)
+
+    ranks = pd.DataFrame()    
 
     for i in files:
 
@@ -1208,16 +1250,17 @@ def ZP_fix(path=os.getcwd()):
     #endregion
 
     #region Ranks
-    ranks.drop(['Reservation Date', 'Session Type', 'Attendance Type',
-      'Location', 'Staff Member', 'Rsvp', 'Att. Last 30 Days', 'Att. Since Last Test',
-      'Class Notes', 'Membership', 'Membership Label', 'Begin Date', 'End Date'], axis=1, inplace=True)
-    ranks.rename(columns={'Person': 'Full Name'}, inplace=True)
+    if not ranks.empty:
+        ranks.drop(['Reservation Date', 'Session Type', 'Attendance Type',
+        'Location', 'Staff Member', 'Rsvp', 'Att. Last 30 Days', 'Att. Since Last Test',
+        'Class Notes', 'Membership', 'Membership Label', 'Begin Date', 'End Date'], axis=1, inplace=True)
+        ranks.rename(columns={'Person': 'Full Name'}, inplace=True)
 
-    # Ranks - If last attendance date = date: preserve, else, drop
-    ranks = ranks[(ranks['Last Att. Date'] == ranks['Date']) & (ranks['Att.'] == 'Yes')]
-    ranks['Check In Date'] = ranks['Date'] + " " + ranks['Time']
-    ranks['Check In Date'] = pd.to_datetime(ranks['Check In Date'])
-    ranks = ranks.sort_values('Check In Date', ascending=False).groupby('Full Name', as_index=False).head(1)
+        # Ranks - If last attendance date = date: preserve, else, drop
+        ranks = ranks[(ranks['Last Att. Date'] == ranks['Date']) & (ranks['Att.'] == 'Yes')]
+        ranks['Check In Date'] = ranks['Date'] + " " + ranks['Time']
+        ranks['Check In Date'] = pd.to_datetime(ranks['Check In Date'])
+        ranks = ranks.sort_values('Check In Date', ascending=False).groupby('Full Name', as_index=False).head(1)
     #endregion
 
     #region Memberships
@@ -1230,7 +1273,7 @@ def ZP_fix(path=os.getcwd()):
 
     mem['Installment Plan'].replace({'Every Month': '30', 'Single Payment': '0', 'Every 1 Week': '7'}, inplace=True)
     # Mems - Find duplicates based of name + last attendance date - keep one iwht highest number
-    mem = mem.sort_values('Number', ascending=False).groupby(['Full Name', 'Last Att. Date'], as_index=False).head(1)
+    mem = mem.sort_values('Number', ascending=False).groupby(['Full Name'], as_index=False).head(1)
     mem['Payment Amount'] = mem['Payment Amount'].replace(r'^\$', '', regex=True)
     #endregion
 
@@ -1268,9 +1311,10 @@ def ZP_fix(path=os.getcwd()):
     complete = pd.merge(con, mem[colsToUse], on=['Last Att. Date', 'Full Name'], how='left')
 
 
-    colsToUse = ranks.columns.difference(complete.columns).tolist()
-    colsToUse.extend(['Last Att. Date', 'Full Name'])
-    complete = pd.merge(complete, ranks[colsToUse], on=['Last Att. Date', 'Full Name'], how='left').drop_duplicates()
+    if not ranks.empty:
+        colsToUse = ranks.columns.difference(complete.columns).tolist()
+        colsToUse.extend(['Last Att. Date', 'Full Name'])
+        complete = pd.merge(complete, ranks[colsToUse], on=['Last Att. Date', 'Full Name'], how='left').drop_duplicates()
 
     colsToUse = bills.columns.difference(complete.columns).tolist()
     colsToUse.append('Number')
@@ -1297,6 +1341,9 @@ def ZP_fix(path=os.getcwd()):
 
     complete['Installments Remaining'] = np.where((complete['Installments Remaining'].isnull()) & (complete['Mbr. Status'] == 'COMPLETED'),
                                                 '0', complete['Installments Remaining'])
+    
+    complete['Billing Company'] = np.where(complete['Installments Remaining'].notnull(), 'In House', '')
+    complete['Payment Method'] = complete['Billing Company']
 
     complete.drop(['Birth Month','First Bill Due', '# of Installments','Birth Day','Interest (sub)','Referred By','Last Updated','Last Log Entry',
     'Tracking Source','Tracking Name','Tracking Medium','Tracking Keywords', 'Primary Location','Signup Fee?',
