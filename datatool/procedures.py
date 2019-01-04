@@ -14,10 +14,12 @@ def load(path, directory=None):
     Loads the given filename found at filepath with the preferred options.
     Accepts CSV, XLS, XLSX, HTML, and XML.
 
-        :param filename:
-            The name of the file.
-        :param filepath:
-            The path of the file.
+        :param path:
+            The full path to the file.
+        :param directory:
+            ~~ Overload ~~ 
+            The path of the directory containing the file.
+            If this is used, the path variable must instead be the filename.
 
     Returns:
         Pandas DataFrame
@@ -218,12 +220,12 @@ def fix_dates(df, column=None):
     """
     if isinstance(column, list):
         for x in column:
-            df[x] = pd.to_datetime(df[x])
+            df[x] = pd.to_datetime(df[x], errors='coerce')
             df[x] = df[x].dt.strftime('%m-%d-%Y')
             df[x].replace('NaT', np.nan, inplace=True)
         return df
     else:
-        df[column] = pd.to_datetime(df[column])
+        df[column] = pd.to_datetime(df[column], errors='coerce')
         df[column] = df[column].dt.strftime('%m-%d-%Y')
         df[column].replace('NaT', np.nan, inplace=True)
         return df

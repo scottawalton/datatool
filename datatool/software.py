@@ -1048,7 +1048,7 @@ def RM_fix(path, date=pd.to_datetime('today')):
     ### Rainmaker exports files in an unsupported format.
     ### I can't find anything that supports it, so it won't be completely automated for the time being.
 
-    #region Load    
+    #region Load
 
     df = procedures.load(path)
 
@@ -1198,6 +1198,7 @@ def RM_fix(path, date=pd.to_datetime('today')):
 
     if not cus.empty:
         df = df.merge(cus, on='Id', how='left')
+        df.drop_duplicates(keep='first', inplace=True)
     #endregion
 
     #region Output

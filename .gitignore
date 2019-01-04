@@ -2,3 +2,4 @@ __pycache__
 .DS_STORE
 .vscode/settings.json
 datatool/.vscode/settings.json
+datatool/misc.py
