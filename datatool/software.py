@@ -593,6 +593,7 @@ def MB_fix(path=os.getcwd(), key='MBSystemID'):
     #endregion
 
     #region Memberships
+    ##### NEEDS REVISIONS TO LOOK AT MBCLIENTID TO ACCOUNT FOR FAMILY MEMBERSHIIPS ######
     if not mem.empty:
         mem.drop(['PayerBarcodeID','PayerLastName','PayerFirstName', 'TerminationDate',
         'RunDateTime', 'Contract Agreement Date', 'LocationName', 'AutoPayItemDescription'], axis=1, inplace=True, errors='ignore')
@@ -1138,7 +1139,6 @@ def RM_fix(path, date=pd.to_datetime('today')):
                                          '30', df['Payment Frequency'])
     # New export format lists every Contact with a renewal twice - this consolidates them into one.
     problems = pd.DataFrame(columns=df.columns.values)
-    problems = problems.drop(['CCN', 'Bank Routing'], axis=1)
     original_sort = df.index
     master_drop = []
     df = df.ix[pd.to_datetime(df['Current Program Start Date']).sort_values().index]
@@ -1166,10 +1166,11 @@ def RM_fix(path, date=pd.to_datetime('today')):
                     if i not in master_drop:
                         master_drop.append(i)
         if len(group.index.values) > 1 and group['Current Program'].nunique() != 1:
-            problems = problems.append(group)
+            problems = problems.append(group, sort=False)
 
     df = df.reindex(original_sort)
     df.drop(df.index[master_drop], inplace=True)
+    problems = problems.drop(['CCN', 'Bank Routing'], axis=1)
 
     df = df.drop(['Age', 'Total Contract Amount', 'Down Payment', 'Total Financed', 'Middle Init',
                 'First Payment Due Date', 'Last Payment Date', 'Date To Take Payment', 'On Trial',
@@ -1282,7 +1283,7 @@ def ZP_fix(path=os.getcwd()):
 
     bills.drop(['Paid By Staff', 'Sales Rep', 'Income Category', 'Paid Date', 'Paid Month',
       'Paid On Time', 'Unit Count', 'Unit Price', 'Discount Total', 'After Discounts', 'Taxable?', 'Tax Amt',
-      'Tax 2?', 'Tax 2 Amt', 'Amount Due', 'Amount Paid', 'Amount Unpaid', 'First Name', 'Last Name'], axis=1, inplace=True)
+      'Tax 2?', 'Tax 2 Amt', 'Amount Due', 'Amount Paid', 'Amount Unpaid', 'First Name', 'Last Name'], axis=1, inplace=True, errors='ignore')
 
     bills['Number'] = bills['Description'].str.extract(r'#(\d+)', expand=False)
     bills = bills[(bills['Purchase Type'] == 'Membership') & (bills['Number'].notnull())]
@@ -1324,7 +1325,7 @@ def ZP_fix(path=os.getcwd()):
     cols = ['Birth Date', 'Mbr. Begin Date', 'Date Added', 'Last Att. Date', 'Mbr. End Date', 'First Bill Due', 'Next Payment Due Date']
     for x in cols:
         if x in complete.columns.values:
-            complete[x] = pd.to_datetime(complete[x])
+            complete[x] = pd.to_datetime(complete[x], errors='coerce')
             complete[x].dt.strftime('%m-%d-%Y').astype(str)
 
     phones = ['Home Phone','Cell Phone', 'Phone']
