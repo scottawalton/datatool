@@ -16,10 +16,10 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
     """
     This is the main window of the application.
     Upon initialization, we bind all of the signals to functions and initialize the UI.
-    
-        :param filename=None: 
+
+        :param filename=None:
             The filename of the file we are opening, if we load one on launch.
-        :param path=os.getcwd(: 
+        :param path=os.getcwd(:
             The path to the file we want to open, if we load one on launch.
     """
 
@@ -54,7 +54,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.actionRemove_Non_Numberic.triggered.connect(self.removeNonNumeric)
         self.actionCorrect_Date_Format.triggered.connect(self.correctDateFormat)
         self.actionDisperse_Ranks_By_Program.triggered.connect(self.ranksByProgram)
-        self.actionFind_and_Replace.triggered.connect(self.findAndReplace)
+        self.actionFind_and_Replace.triggered.connect(self.findText)
         self.actionNew_Rows_On_Separator.triggered.connect(self.newRowsOnSeparator)
 
         self.actionKickSite.triggered.connect(self.software_ks)
@@ -68,6 +68,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
         # Run button
         self.runButton.clicked.connect(self.runCommand)
+
 
     def runCommand(self):
         """
@@ -98,7 +99,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
                 exec(command)
                 self.getCurrentPanda().layoutChanged.emit()
                 self.getCurrentPanda().appendState()
-            
+
             except:
                 errorMsg = 'There was a problem with the command entered. \n' + \
                            'See stack trace: \n\n' + traceback.format_exc()
@@ -115,9 +116,9 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         A simple message box to tell the user something.
         They cannot proceed until they press 'Ok'.
 
-            :param message: 
+            :param message:
                 The message you want to share with the user.
-        """   
+        """
 
 
         msg = QtWidgets.QMessageBox(self)
@@ -135,7 +136,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
 
         currentTab = self.tabWidget.currentWidget()
-        
+
         View = currentTab.findChild(QtWidgets.QTableView)
 
         return View
@@ -161,13 +162,13 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         """
         Retrieves the PandasTable model at the given tab index.
 
-            :param index: 
+            :param index:
                 The index of the tab of the desired PandasTable
-        
+
         Returns:
             PandasTable model
         """
-        
+
 
         tab = self.tabWidget.widget(index)
         view = tab.findChild(QtWidgets.QTableView)
@@ -179,9 +180,9 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         Creates a new tab with the given PandasTable model displayed in a TableView.
         Automatically appends it to the end of the tab bar.
 
-            :param panda: 
+            :param panda:
                 The PandasTable model you wish to display
-        
+
         """
 
         # We create the panda here so we can set the parent to be the tab
@@ -250,7 +251,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
     def openData(self):
         """
-        Prompts the user for a file to load into view, instantiates a new PandasTable 
+        Prompts the user for a file to load into view, instantiates a new PandasTable
         with the user's selection and opens it in a new tab. If an invalid path is given, the user is notified.
         """
 
@@ -265,7 +266,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
                 filepath, filename = os.path.split(path[0])
                 pandaData = procedures.load(filename, filepath)
 
-                self.createTab(pandaData)
+                self.createTab(pandaData, name=filename)
 
             else:
                 self.notifyUser("Please pick a valid file.")
@@ -280,7 +281,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', os.getcwd())
 
         if path[0] != '':
-    
+
             filepath, filename = os.path.split(path[0])
 
             if os.path.exists(filepath):
@@ -290,8 +291,8 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
     def Exit(self):
         """
         Quits the application.
-        """   
-        
+        """
+
 
         QtCore.QCoreApplication.exit()
     #endregion
@@ -314,7 +315,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         self.getCurrentPanda().insertBlank(selectionModel)
 
     def duplicateSelected(self):
-    
+
         # A selection model to get the current selection
         selectionModel = self.getCurrentView().selectionModel()
 
@@ -350,7 +351,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
     def ranksByProgram(self):
         """
-        Prompts the user to select a column of unique values 
+        Prompts the user to select a column of unique values
         (programs) to distribute the other column's (ranks) values into.
 
         Passes the selected values to the active Panda to deal with.
@@ -362,6 +363,30 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
         # Passes values to PandaModel to be validated and acted upon
         self.getCurrentPanda().ranksByPrograms(ranks, programs)
 
+    def findText(self):
+        """
+        Prompts the user to input text to search for.
+        Accepts regex by default.
+
+        Passes the given values to the active Panda to deal with.
+        """
+
+        # Prompts user for find regex
+        findText,_  = Model.FindAndReplaceDialogBox.getResults(self)
+        model = self.getCurrentPanda()
+        start = model.index(0, 0)
+        matches = model.match(
+            start, QtCore.Qt.DisplayRole,
+            findText, -1, QtCore.Qt.MatchContains)
+        if matches:
+            index = matches[0]
+            self.getCurrentView().clearSelection()
+            self.getCurrentView().selectionModel().select(
+                index, QtCore.QItemSelectionModel.Select)
+            self.getCurrentView().scrollTo(index)
+        else:
+            self.notifyUser("No matches found.")
+
     def findAndReplace(self):
         """
         Prompts the user to input text to search for and text to replace it with.
@@ -372,7 +397,7 @@ class MyWorkingCode(QtWidgets.QMainWindow, Ui_DataTool):
 
         # Prompts user for find regex and replace text
         findText, replaceText = Model.FindAndReplaceDialogBox.getResults(self)
-        
+
         # Gets the current selection from the current tab
         selectionModel = self.getCurrentView().selectionModel()
 

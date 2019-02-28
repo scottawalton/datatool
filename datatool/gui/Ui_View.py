@@ -2,11 +2,12 @@
 
 # Form implementation generated from reading ui file '/home/vesi/documents/bin/datatool/datatool/gui/View.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.12
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_DataTool(object):
     def setupUi(self, DataTool):
@@ -214,6 +215,8 @@ class Ui_DataTool(object):
         self.actionHelp.setText(_translate("DataTool", "Help"))
 
 
+
+
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
@@ -222,4 +225,3 @@ if __name__ == "__main__":
     ui.setupUi(DataTool)
     DataTool.show()
     sys.exit(app.exec_())
-
